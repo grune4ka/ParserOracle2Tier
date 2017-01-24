@@ -4,7 +4,6 @@ package parseroracle2tier;
 
 import java.io.BufferedReader;
 import java.io.File;
-
 import java.io.FileWriter;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -13,13 +12,11 @@ import java.util.ArrayList;
 import javax.swing.*;
 import java.util.*;
 
-
-
-
 public class Prs extends SwingWorker<Void, Void> {
 
     private ArrayList<File> path = null;
     private WindowProgress wind_progress = null;
+    private int count_variable = 0;
     
     @Override
     protected Void doInBackground() {
@@ -33,34 +30,92 @@ public class Prs extends SwingWorker<Void, Void> {
                 FileWriter method_file = new FileWriter(method_txt)) {
             String line;            
             int i = 0; 
-            HashMap<String, String> quer = new HashMap<>();
-            double procent = path.get(1).length(), lenght = 0.;
-            while ((line = reader_log.readLine()) != null) {               
-                if (line.contains("OCIStmtPrepare")) {                   
+            HashMap<String, StringBuilder> quer = new HashMap<>();
+            HashMap<String, String> params_execute = new HashMap<>();
+            double procent = path.get(1).length(), lenght = 0.;            
+            
+            while ((line = reader_log.readLine()) != null) {
+                after_empty_execute_statement:
+                if (line.contains("OCIStmtPrepare")) {
+                    StringBuilder acum_statem = new StringBuilder("\t\t\t" + line.substring(109, line.length()));                    
+                    String key = line.substring(80, 98); 
                     result_file.write(line.substring(110, line.length()));
-                    while (!(line = reader_log.readLine()).contains("[OCI_SUCCESS]")) 
-                        result_file.write(System.lineSeparator() + line);                    
+                    while (!(line = reader_log.readLine()).contains("[OCI_SUCCESS]")) {
+                        acum_statem.append("\" + \r\n\t\t\t\"");
+                        acum_statem.append(line);
+                        result_file.write(System.lineSeparator() + line); 
+                    }       
                     result_file.write(System.lineSeparator() + System.lineSeparator() + ++i + ")" + System.lineSeparator());
+                    quer.put(key, acum_statem);
+                    
                 }
+                else if (line.contains("OCIStmtExecute")) {                    
+                    
+                    int j = 0; 
+                    String statement = quer.get(line.substring(90, 108)).toString().replaceAll("(?<=[^\\t\\t\\t])\"(?!( \\+))", "\\\\\"");
+                    String name_variable_statement;
+                    count_variable++;
+                    if (statement.indexOf("begin") != -1) { 
+                        name_variable_statement = "clSt_" + count_variable;
+                        method_file.write("CallableStatement " + 
+                                name_variable_statement + 
+                                " = connection.prepareCall(\n" +
+                                statement +
+                                "\");\n"); 
+                    }
+                    else {
+                        name_variable_statement = "prSt_" + count_variable;
+                        method_file.write("PreparedStatement " + 
+                                name_variable_statement + 
+                                " = connection.prepareStatement(\n" +
+                                statement +
+                                "\");\n"); 
+                    }
+                    String pr_name = null;
+                    String rs_name = null;
+                    boolean flag_result_set = false;
+                    while (!(line = reader_log.readLine()).contains("AFTER") && !line.contains("row(s) fetched")) {                        
+                        if (line.isEmpty())
+                            continue;
+                        else if (line.contains("[LRD")) {
+                            if (flag_result_set)
+                                printExecuteAndFetch(flag_result_set, count_variable, name_variable_statement, rs_name, method_file);
+                            break after_empty_execute_statement;
+                        }
+                        else if (++j > 3) {                            
+                            pr_name = line.substring(3, line.indexOf('=')).trim().toLowerCase();
+                            if (statement.matches("[\\s\\S]*" + pr_name + "\\s*:=[\\s\\S]*")) {
+                                flag_result_set = true;
+                                rs_name = new String(pr_name);
+                                method_file.write(name_variable_statement + ".registerOutParameter(\"" + pr_name + "\", OracleTypes.CURSOR);\r\n");
+                                continue;
+                            }
+                            String value = line.substring(line.indexOf('=') + 1);
+                            if (value.matches("^\\d*\\d$"))
+                                method_file.write(name_variable_statement + ".setLong(\"" + pr_name + "\", " + value + "L);\r\n");
+                            else
+                                method_file.write(name_variable_statement + ".setString(\"" + pr_name + "\", \"" + value + "\");\r\n");
+                        }                        
+                    }
+                    printExecuteAndFetch(flag_result_set, count_variable, name_variable_statement, rs_name, method_file);
+                }                
                 lenght += (line.length() + 3);
                 if(isCancelled())
                     return null;
                 setProgress((int)((lenght / procent) * 100)); 
-                Thread.sleep(1);
+                //Thread.sleep(1);
             }
             setProgress(100);
             Thread.sleep(1000);
-        } catch (IOException e) {}
-        catch(InterruptedException e) {}
-        
+        } catch (IOException e) {e.printStackTrace();}
+        catch(InterruptedException e) {e.printStackTrace();}
+        catch(Exception e) {e.printStackTrace();}
         path.add(result_txt);
-                            
         return null;
     }
                         
     @Override
     protected void done() {
-        
         int i = path.size() - 1;
         wind_progress.succededWnpr(path.get(i));
         path.remove(i);
@@ -72,8 +127,6 @@ public class Prs extends SwingWorker<Void, Void> {
         wind_progress = w;
         execute();
     }
-    
-    
     
     public static ArrayList<File> checkDirectory(File path, ArrayList<JLabel> content) {
         ArrayList<File> array_paths = new ArrayList<>();
@@ -104,7 +157,22 @@ public class Prs extends SwingWorker<Void, Void> {
         else 
             return null;
         return array_paths;
-    }   
+    } 
+    
+    private void printExecuteAndFetch(boolean flag, int count_variable, String name_variable_statement, String rs_name, FileWriter method_file) {
+        
+        try {
+            method_file.write(name_variable_statement + ".execute();\r\nResultSet rsPrCr_" + count_variable);
+            if (flag)
+                method_file.write(" = (ResultSet)" +
+                        name_variable_statement +
+                        ".getObject(\"" +
+                        rs_name + "\");\r\n\r\n\r\n");
+            else
+                method_file.write(name_variable_statement + ".execute();\r\n\r\n\r\n");
+            
+        } catch (IOException e) { e.printStackTrace(); }
+    }
 }
 
 
