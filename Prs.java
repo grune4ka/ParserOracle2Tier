@@ -1,4 +1,3 @@
-
 package parseroracle2tier;
 
 import java.io.BufferedReader;
@@ -38,8 +37,11 @@ public class Prs extends SwingWorker<Void, Void> {
             HashMap<String, StringBuilder> quer = new HashMap<>();
             HashMap<String, String> user_param = new HashMap<>();
             double procent = path.get(1).length(), lenght = 0.;            
-            busines_file.write("\npublic class Uc {\n\n\tStep cst = new Step();\n\n");
-            method_file.write("\npublic class Step {\n\n");
+            busines_file.write("\npublic class Uc {\n\n\tprivate final Step cst;\n\n" + 
+                    "\tpublic Uc(Connection c) {\n\t\tcst  = new Step(c)\n\t}\n\n");
+            method_file.write("\npublic class Step {\n\n" + 
+                    "\tprivate final Connection connection;\n\n" + 
+                    "\tpublic Step(Connection c) {\n\t\tconnection = c;\n\t}\n\n");
             while ((line = reader_log.readLine()) != null) {
                 if (is_exec) {
                     parsAction(reader_action, busines_file, method_file, user_param);
@@ -56,8 +58,7 @@ public class Prs extends SwingWorker<Void, Void> {
                         result_file.write(System.lineSeparator() + line); 
                     }       
                     result_file.write(System.lineSeparator() + System.lineSeparator() + ++i + ")" + System.lineSeparator());
-                    quer.put(key, acum_statem);
-                    
+                    quer.put(key, acum_statem);                    
                 }
                 else if (line.contains("OCIStmtExecute")) {                    
                     is_exec = true;
@@ -83,6 +84,7 @@ public class Prs extends SwingWorker<Void, Void> {
                     }
                     String pr_name = null;
                     String rs_name = null;
+                    HashMap<String, String> tmp_prm = null;
                     short flag_result_set = 0;
                     while (!(line = reader_log.readLine()).contains("AFTER") && !line.contains("row(s) fetched")) {                        
                         if (line.isEmpty())
@@ -91,33 +93,50 @@ public class Prs extends SwingWorker<Void, Void> {
                             printExecuteAndFetch(flag_result_set, count_variable, name_variable_statement, rs_name, method_file);
                             break after_empty_execute_statement;
                         }
-                        else if (++j > 3) {                            
-                            pr_name = line.substring(3, line.indexOf('=')).trim().toLowerCase();
+                        else if (++j > 3) {
+                            if (tmp_prm == null) 
+                                tmp_prm = new HashMap<String, String>();
+                            
+                            String tmp = ""; 
+                            int index = 0;
+                            pr_name = line.substring(3, line.indexOf('=')).trim();
+                            while (pr_name.compareToIgnoreCase(tmp = statement.substring(index, index + pr_name.length())) != 0) 
+                                index = statement.indexOf(":", index) + 1;                                                                            
+                            pr_name = tmp; 
                             if (statement.matches("[\\s\\S]*" + pr_name + "\\s*:=[\\s\\S]*")) {
                                 flag_result_set = 1;
                                 if (statement.contains("select"))
                                     flag_result_set = 2;
-                                rs_name = new String(pr_name);
-                                method_file.write("\t\t" + name_variable_statement + ".registerOutParameter(\"" + pr_name + "\", OracleTypes.CURSOR);\r\n");
+                                rs_name = pr_name;
+                                tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".registerOutParameter(\"" + pr_name + "\", OracleTypes.CURSOR);\r\n");
                                 continue;
                             }
                             String value = line.substring(line.indexOf('=') + 1);
                             if (value.matches("^\\d*\\d$"))
-                                method_file.write("\t\t" + name_variable_statement + ".setLong(\"" + pr_name + "\", " + value + "L);\r\n");
+                                tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".setLong(\"" + pr_name + "\", " + value + "L);\r\n");
                             else
-                                method_file.write("\t\t" + name_variable_statement + ".setString(\"" + pr_name + "\", \"" + value + "\");\r\n");
+                                tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".setString(\"" + pr_name + "\", \"" + value + "\");\r\n");
                         }                        
+                    }
+                    if (tmp_prm != null) {
+                        if (tmp_prm.size() > 1) {
+                            TreeMap<Integer, String> sort_param = new TreeMap<>();
+                            for (Map.Entry<String, String> v : tmp_prm.entrySet()) 
+                                sort_param.put(statement.indexOf(":" + v.getKey()), v.getKey());
+                            for (Map.Entry<Integer, String> v : sort_param.entrySet())
+                                method_file.write(tmp_prm.get(v.getValue()));
+                        }
+                        else 
+                            method_file.write(tmp_prm.get(pr_name));
                     }
                     printExecuteAndFetch(flag_result_set, count_variable, name_variable_statement, rs_name, method_file);
                 }                
                 lenght += (line.length() + 3);
                 if(isCancelled())
                     return null;
-                setProgress((int)((lenght / procent) * 100)); 
-               
+                setProgress((int)((lenght / procent) * 100));              
             }
-            busines_file.write("\n\t}\n}"); 
-            
+            busines_file.write("\n\t}\n}");            
             method_file.write("\n\t}\n\n\tprivate void fetchResultSet(ArrayList<ParamsWithCoordinates> arr_prm, ResultSet result) {\n\n" +
                     "\t\t/* do something fetching */" +
                     "\n\t}\n\n\tprivate class ParamsWithCoordinates {\n\n" +
@@ -128,8 +147,7 @@ public class Prs extends SwingWorker<Void, Void> {
                     "\t\t\tthis.Name = Name;\n" +
                     "\t\t\tthis.X = X;\n" +
                     "\t\t\tthis.Y = Y;\n\t\t}\n\t}" +
-                    "\n}");
-            
+                    "\n}");            
             setProgress(100);
             Thread.sleep(100);
         } catch (IOException e) {e.printStackTrace();}
@@ -143,8 +161,7 @@ public class Prs extends SwingWorker<Void, Void> {
     protected void done() {
         int i = path.size() - 1;
         wind_progress.succededWnpr(path.get(i));
-        path.remove(i);
-                            
+        path.remove(i);                            
     }
     
     public void execute(ArrayList<File> p, WindowProgress w) {
@@ -154,6 +171,7 @@ public class Prs extends SwingWorker<Void, Void> {
     }
     
     public static ArrayList<File> checkDirectory(File path, ArrayList<JLabel> content) {
+        
         ArrayList<File> array_paths = new ArrayList<>();
         String name_file = path.getName();
         
@@ -203,15 +221,13 @@ public class Prs extends SwingWorker<Void, Void> {
                         ".getResultSet();\r\n\t\tfetchResultSet(null, " + 
                         "resSet_" + count_variable +
                         ");\r\n");
-            }
-            
-            method_file.write("\r\n");
-            
-           
+            }            
+            method_file.write("\r\n");          
         } catch (IOException e) { e.printStackTrace(); }
     }
     
     private boolean parsAction(BufferedReader reader_action, FileWriter busines_file, FileWriter method_file, HashMap<String, String> user_param) throws IOException {
+        
         String line = null;
         String tmp;   
         
@@ -224,7 +240,7 @@ public class Prs extends SwingWorker<Void, Void> {
                             if (tmp.endsWith("*/"))
                                 tmp = tmp.substring(0 , tmp.length() - 3);
                             validateParam(tmp);
-                            busines_file.write((is_open_uc ? "\t} \n\n\tpublic void" : "\tpublic void ") + tmp + " {");
+                            busines_file.write((is_open_uc ? "\t} \n\n\tpublic void" : "\tpublic void ") + tmp + "() throws SQLException  {");
                             if (!is_open_uc)
                                 is_open_uc = true;
                         }
@@ -234,7 +250,7 @@ public class Prs extends SwingWorker<Void, Void> {
                                 tmp = tmp.substring(0 , tmp.length() - 3);
                             validateParam(tmp);
                             busines_file.write("\n\n\t\tcst." + tmp + "();");
-                            method_file.write((is_open_step ? "\t} \n\n\tpublic void " : "\tpublic void ") + tmp + " {\n\n");
+                            method_file.write((is_open_step ? "\t} \n\n\tpublic void " : "\tpublic void ") + tmp + "() throws SQLException {\n\n");
                             if (!is_open_step)
                                 is_open_step = true;
                         }
@@ -242,16 +258,14 @@ public class Prs extends SwingWorker<Void, Void> {
                             String name;
                             String value;
                             if (!line.matches(".*value=.*"))
-                                throw new Exception("Not valid user parametr" + line);
-                            
+                                throw new Exception("Not valid user parametr" + line);                            
                             int index;
                             if ((index = line.indexOf(' ', line.indexOf("name="))) < 0)
                                 throw new Exception("Not valid user parametr" + line);    
                             name = line.substring(line.indexOf("name=") + 5, index);
                             if (name.contains("value="))
                                 throw new Exception("Not valid user parametr" + name); 
-                            validateParam(name);
-                            
+                            validateParam(name);                            
                             index = line.indexOf("value=") + 6;
                             value = line.substring(index);
                             if (value.contains("name="))
@@ -259,8 +273,7 @@ public class Prs extends SwingWorker<Void, Void> {
                             if (name.endsWith("*/"))
                                 name = name.substring(0 , name.length() - 3);
                             if (value.endsWith("*/"))
-                                value = value.substring(0 , value.length() - 3);
-                                                        
+                                value = value.substring(0 , value.length() - 3);                                                        
                             if (value.matches("^\\d*\\d$"))
                                 method_file.write("\t\tLong " + name + " = " + value + "L;\n");
                             else
@@ -281,10 +294,3 @@ public class Prs extends SwingWorker<Void, Void> {
             throw new Exception("Not valid user comment" + str);
     }
 }
-
-
-
-
-
-
-
