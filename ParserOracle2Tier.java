@@ -1,6 +1,4 @@
-
 package parseroracle2tier;
-
 
 import java.awt.Color;
 import java.awt.Font;
@@ -11,7 +9,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import javax.swing.*;
-
 
 public class ParserOracle2Tier {
 
@@ -31,12 +28,9 @@ public class ParserOracle2Tier {
         main_btn.setText("Open Action.c file");
         chan_btn.setBounds(190, 180, 140, 30);      
         main_btn.setBounds(340, 180, 140, 30);        
-               
         content.add(new JLabel("Status: on start"));
-        content.get(0).setFont(new Font("Arial", Font.PLAIN, 16));        
-        
+        content.get(0).setFont(new Font("Arial", Font.PLAIN, 16));      
         content.get(0).setBounds(15, 180, 250, 30);               
-        
         panel.add(main_btn);
         panel.add(content.get(0));
         
@@ -85,7 +79,6 @@ public class ParserOracle2Tier {
                     ArrayList<File> tmp_array_path;
                     if (wind.showOpenDialog(null) != JFileChooser.APPROVE_OPTION) 
                         return;
-                    
                     tmp = wind.getSelectedFile();
                     if ((tmp_array_path = Prs.checkDirectory(tmp, content)) == null) {
                         if (panel.getBackground() != Color.LIGHT_GRAY) {                    
@@ -140,7 +133,6 @@ public class ParserOracle2Tier {
                 }
             }
         });
-         
          root.add(panel);
          root.setLocation(400, 300);
          root.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -149,14 +141,7 @@ public class ParserOracle2Tier {
          root.setVisible(true);
     }
 
-                
-                
     public static void main(String[] args) {
         new ParserOracle2Tier();
     }
-    
 }
-
-
-
-

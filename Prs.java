@@ -137,7 +137,7 @@ public class Prs extends SwingWorker<Void, Void> {
                 setProgress((int)((lenght / procent) * 100));              
             }
             busines_file.write("\n\t}\n}");            
-            method_file.write("\n\t}\n\n\tprivate void fetchResultSet(ArrayList<ParamsWithCoordinates> arr_prm, ResultSet result) {\n\n" +
+            method_file.write("\n\t}\n\n\tprivate void fetchResultSet(ArrayList<ParamsWithCoordinates> arr_prm, ResultSet result) throws SQLException {\n\n" +
                     "\t\t/* do something fetching */" +
                     "\n\t}\n\n\tprivate class ParamsWithCoordinates {\n\n" +
                     "\t\tpublic final String Name;\n" +
