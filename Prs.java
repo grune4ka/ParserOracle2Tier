@@ -38,7 +38,7 @@ public class Prs extends SwingWorker<Void, Void> {
             HashMap<String, String> user_param = new HashMap<>();
             double procent = path.get(1).length(), lenght = 0.;            
             busines_file.write("\npublic class Uc {\n\n\tprivate final Step cst;\n\n" + 
-                    "\tpublic Uc(Connection c) {\n\t\tcst  = new Step(c)\n\t}\n\n");
+                    "\tpublic Uc(Connection c) {\n\t\tcst  = new Step(c);\n\t}\n\n");
             method_file.write("\npublic class Step {\n\n" + 
                     "\tprivate final Connection connection;\n\n" + 
                     "\tpublic Step(Connection c) {\n\t\tconnection = c;\n\t}\n\n");
@@ -53,7 +53,7 @@ public class Prs extends SwingWorker<Void, Void> {
                     String key = line.substring(80, 98); 
                     result_file.write(line.substring(110, line.length()));
                     while (!(line = reader_log.readLine()).contains("[OCI_SUCCESS]")) {
-                        acum_statem.append("\" + \r\n\t\t\t\t\t\"");
+                        acum_statem.append(" \" + \r\n\t\t\t\t\t\"");
                         acum_statem.append(line);
                         result_file.write(System.lineSeparator() + line); 
                     }       
@@ -240,7 +240,7 @@ public class Prs extends SwingWorker<Void, Void> {
                             if (tmp.endsWith("*/"))
                                 tmp = tmp.substring(0 , tmp.length() - 3);
                             validateParam(tmp);
-                            busines_file.write((is_open_uc ? "\t} \n\n\tpublic void" : "\tpublic void ") + tmp + "() throws SQLException  {");
+                            busines_file.write((is_open_uc ? "\t}\n\n\tpublic void " : "\tpublic void ") + tmp + "() throws SQLException  {");
                             if (!is_open_uc)
                                 is_open_uc = true;
                         }
@@ -249,7 +249,7 @@ public class Prs extends SwingWorker<Void, Void> {
                             if (tmp.endsWith("*/"))
                                 tmp = tmp.substring(0 , tmp.length() - 3);
                             validateParam(tmp);
-                            busines_file.write("\n\n\t\tcst." + tmp + "();");
+                            busines_file.write("\n\n\t\tcst." + tmp + "();\n");
                             method_file.write((is_open_step ? "\t} \n\n\tpublic void " : "\tpublic void ") + tmp + "() throws SQLException {\n\n");
                             if (!is_open_step)
                                 is_open_step = true;
