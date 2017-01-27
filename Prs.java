@@ -137,9 +137,18 @@ public class Prs extends SwingWorker<Void, Void> {
                 setProgress((int)((lenght / procent) * 100));              
             }
             busines_file.write("\n\t}\n}");            
-            method_file.write("\n\t}\n\n\tprivate void fetchResultSet(ArrayList<ParamsWithCoordinates> arr_prm, ResultSet result) throws SQLException {\n\n" +
-                    "\t\t/* do something fetching */" +
-                    "\n\t}\n\n\tprivate class ParamsWithCoordinates {\n\n" +
+            method_file.write("\n\t}\n\n\tprivate HashMap<String, String> fetchResultSet(ArrayList<ParamsWithCoordinates> arr_prm, ResultSet result) throws SQLException {\n\n" +
+                    "\t\tint count_column = result.getMetaData().getColumnCount();\n" +
+                    "\t\tif (arr_prm == null)\n" +
+                    "\t\t\twhile (result.next())\n" +
+                    "\t\t\t\tfor (int i = 1; i <= count_column; i++)\n\t\t\t\t\tresult.getObject(i);\n\t\telse {\n" +
+                    "\t\t\tHashMap<String, String> returnValue = new HashMap<>();\n" +
+                    "\t\t\tfor (int row = 1; result.next(); row++) {\n\t\t\t\tfor (int column = 1; column <= count_column; column++) { \n" +
+                    "\t\t\t\tObject tmp = result.getObject(row);\n" +
+                    "\t\t\t\tfor (ParamsWithCoordinates ref : arr_prm)\n" +
+                    "\t\t\t\t\tif (row == ref.X && column == ref.Y)\n" +
+                    "\t\t\t\t\t\treturnValue.put(ref.Name, (String)tmp);\n\t\t\t}\n\t\t\treturn returnValue;\n\t\t}\n\t\treturn null;\n\t}\n" +
+                    "\n\n\tprivate class ParamsWithCoordinates {\n\n" +
                     "\t\tpublic final String Name;\n" +
                     "\t\tpublic final int X;\n" +
                     "\t\tpublic final int Y;\n\n" +
