@@ -36,7 +36,7 @@ public class WindowProgress implements PropertyChangeListener {
                     try {                        
                         ProcessBuilder proc = new ProcessBuilder("explorer", result_txt.getPath().substring(0, result_txt.getPath().length() - 18));
                         proc.start();
-                    } catch (IOException e) { /* сделать вывод ошибки в окне */ }
+                    } catch (IOException e) { ErrorMsg.show(e); }
                 }                
             }            
         });

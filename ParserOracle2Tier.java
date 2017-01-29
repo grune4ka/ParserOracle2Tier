@@ -39,7 +39,7 @@ public class ParserOracle2Tier {
                 try {
                     ProcessBuilder proc = new ProcessBuilder("notepad.exe", selected_file.get(0).getPath());
                     proc.start();
-                } catch (IOException e) { /* сделать вывод ошибки в окне */ }
+                } catch (IOException e) { ErrorMsg.show(e); }
             }
         });
         

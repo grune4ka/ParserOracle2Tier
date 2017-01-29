@@ -13,7 +13,7 @@ import java.util.*;
 public class Prs extends SwingWorker<Void, Void> {
 
     private ArrayList<File> path = null;
-    private WindowProgress wind_progress = null;
+    private WindowProgress windProgress = null;
     private int count_variable = 0;
     private boolean is_open_step = false;
     private boolean is_open_uc = false;
@@ -22,42 +22,43 @@ public class Prs extends SwingWorker<Void, Void> {
     @Override
     protected Void doInBackground() {
         
-        File result_txt = new File(path.get(path.size() - 1).getPath() + "\\SQL_Statement.txt");
-        File method_txt = new File(path.get(path.size() - 1).getPath() + "\\Methods.java");
-        File busines_txt = new File(path.get(path.size() - 1).getPath() + "\\BusinesMethod.java");
+        File resultTxt = new File(path.get(path.size() - 1).getPath() + "\\SQL_Statement.txt");
+        File methodTxt = new File(path.get(path.size() - 1).getPath() + "\\Methods.java");
+        File businesTxt = new File(path.get(path.size() - 1).getPath() + "\\BusinesMethod.java");
         
-        try (BufferedReader reader_action = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(0).getPath()), "windows-1251"));
-                BufferedReader reader_log = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(1).getPath()), "windows-1251"));
-                BufferedReader reader_grd = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(2).getPath()), "windows-1251"));
-                FileWriter result_file = new FileWriter(result_txt);
-                FileWriter method_file = new FileWriter(method_txt);
-                FileWriter busines_file = new FileWriter(busines_txt)) {
-            String line;            
+        try (BufferedReader readerAction = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(0).getPath()), "windows-1251"));
+                BufferedReader readerLog = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(1).getPath()), "windows-1251"));
+                BufferedReader readeGrd = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(2).getPath()), "windows-1251"));
+                FileWriter resultFile = new FileWriter(resultTxt);
+                FileWriter methodFile = new FileWriter(methodTxt);
+                FileWriter businesFile = new FileWriter(businesTxt)) {
+            String line;  
+            
             int i = 0; 
             HashMap<String, StringBuilder> quer = new HashMap<>();
             HashMap<String, String> user_param = new HashMap<>();
             double procent = path.get(1).length(), lenght = 0.;            
-            busines_file.write("\npublic class Uc {\n\n\tprivate final Step cst;\n\n" + 
+            businesFile.write("\npublic class Uc {\n\n\tprivate final Step cst;\n\n" + 
                     "\tpublic Uc(Connection c) {\n\t\tcst  = new Step(c);\n\t}\n\n");
-            method_file.write("\npublic class Step {\n\n" + 
+            methodFile.write("\npublic class Step {\n\n" + 
                     "\tprivate final Connection connection;\n\n" + 
                     "\tpublic Step(Connection c) {\n\t\tconnection = c;\n\t}\n\n");
-            while ((line = reader_log.readLine()) != null) {
+            while ((line = readerLog.readLine()) != null) {
                 if (is_exec) {
-                    parsAction(reader_action, busines_file, method_file, user_param);
+                    parsAction(readerAction, businesFile, methodFile, user_param);
                     is_exec = false;
                 }
                 after_empty_execute_statement:
                 if (line.contains("OCIStmtPrepare")) {
                     StringBuilder acum_statem = new StringBuilder("\t\t\t\t\t" + line.substring(109, line.length()));                    
                     String key = line.substring(80, 98); 
-                    result_file.write(line.substring(110, line.length()));
-                    while (!(line = reader_log.readLine()).contains("[OCI_SUCCESS]")) {
+                    resultFile.write(line.substring(110, line.length()));
+                    while (!(line = readerLog.readLine()).contains("[OCI_SUCCESS]")) {
                         acum_statem.append(" \" + \r\n\t\t\t\t\t\"");
                         acum_statem.append(line);
-                        result_file.write(System.lineSeparator() + line); 
+                        resultFile.write(System.lineSeparator() + line); 
                     }       
-                    result_file.write(System.lineSeparator() + System.lineSeparator() + ++i + ")" + System.lineSeparator());
+                    resultFile.write(System.lineSeparator() + System.lineSeparator() + ++i + ")" + System.lineSeparator());
                     quer.put(key, acum_statem);                    
                 }
                 else if (line.contains("OCIStmtExecute")) {                    
@@ -68,7 +69,7 @@ public class Prs extends SwingWorker<Void, Void> {
                     count_variable++;
                     if (statement.indexOf("begin") != -1) { 
                         name_variable_statement = "clSt_" + count_variable;
-                        method_file.write("\t\tCallableStatement " + 
+                        methodFile.write("\t\tCallableStatement " + 
                                 name_variable_statement + 
                                 " = connection.prepareCall(\n" +
                                 statement +
@@ -76,7 +77,7 @@ public class Prs extends SwingWorker<Void, Void> {
                     }
                     else {
                         name_variable_statement = "prSt_" + count_variable;
-                        method_file.write("\t\tPreparedStatement " + 
+                        methodFile.write("\t\tPreparedStatement " + 
                                 name_variable_statement + 
                                 " = connection.prepareStatement(\n" +
                                 statement +
@@ -86,11 +87,11 @@ public class Prs extends SwingWorker<Void, Void> {
                     String rs_name = null;
                     HashMap<String, String> tmp_prm = null;
                     short flag_result_set = 0;
-                    while (!(line = reader_log.readLine()).contains("AFTER") && !line.contains("row(s) fetched")) {                        
+                    while (!(line = readerLog.readLine()).contains("AFTER") && !line.contains("row(s) fetched")) {                        
                         if (line.isEmpty())
                             continue;
                         else if (line.contains("[LRD")) {                            
-                            printExecuteAndFetch(flag_result_set, count_variable, name_variable_statement, rs_name, method_file);
+                            printExecuteAndFetch(flag_result_set, count_variable, name_variable_statement, rs_name, methodFile);
                             break after_empty_execute_statement;
                         }
                         else if (++j > 3) {
@@ -124,58 +125,39 @@ public class Prs extends SwingWorker<Void, Void> {
                             for (Map.Entry<String, String> v : tmp_prm.entrySet()) 
                                 sort_param.put(statement.indexOf(":" + v.getKey()), v.getKey());
                             for (Map.Entry<Integer, String> v : sort_param.entrySet())
-                                method_file.write(tmp_prm.get(v.getValue()));
+                                methodFile.write(tmp_prm.get(v.getValue()));
                         }
                         else 
-                            method_file.write(tmp_prm.get(pr_name));
+                            methodFile.write(tmp_prm.get(pr_name));
                     }
-                    printExecuteAndFetch(flag_result_set, count_variable, name_variable_statement, rs_name, method_file);
+                    printExecuteAndFetch(flag_result_set, count_variable, name_variable_statement, rs_name, methodFile);
                 }                
                 lenght += (line.length() + 3);
                 if(isCancelled())
                     return null;
                 setProgress((int)((lenght / procent) * 100));              
             }
-            busines_file.write("\n\t}\n}");            
-            method_file.write("\n\t}\n\n\tprivate HashMap<String, String> fetchResultSet(ArrayList<ParamsWithCoordinates> arr_prm, ResultSet result) throws SQLException {\n\n" +
-                    "\t\tint count_column = result.getMetaData().getColumnCount();\n" +
-                    "\t\tif (arr_prm == null)\n" +
-                    "\t\t\twhile (result.next())\n" +
-                    "\t\t\t\tfor (int i = 1; i <= count_column; i++)\n\t\t\t\t\tresult.getObject(i);\n\t\telse {\n" +
-                    "\t\t\tHashMap<String, String> returnValue = new HashMap<>();\n" +
-                    "\t\t\tfor (int row = 1; result.next(); row++) {\n\t\t\t\tfor (int column = 1; column <= count_column; column++) { \n" +
-                    "\t\t\t\tObject tmp = result.getObject(row);\n" +
-                    "\t\t\t\tfor (ParamsWithCoordinates ref : arr_prm)\n" +
-                    "\t\t\t\t\tif (row == ref.X && column == ref.Y)\n" +
-                    "\t\t\t\t\t\treturnValue.put(ref.Name, (String)tmp);\n\t\t\t}\n\t\t\treturn returnValue;\n\t\t}\n\t\treturn null;\n\t}\n" +
-                    "\n\n\tprivate class ParamsWithCoordinates {\n\n" +
-                    "\t\tpublic final String Name;\n" +
-                    "\t\tpublic final int X;\n" +
-                    "\t\tpublic final int Y;\n\n" +
-                    "\t\tpublic ParamsWithCoordinates(String Name, int X, int Y) {\n" +
-                    "\t\t\tthis.Name = Name;\n" +
-                    "\t\t\tthis.X = X;\n" +
-                    "\t\t\tthis.Y = Y;\n\t\t}\n\t}" +
-                    "\n}");            
+            businesFile.write("\n\t}\n}");            
+            paste(methodFile, "##fetch##");            
             setProgress(100);
             Thread.sleep(100);
-        } catch (IOException e) {e.printStackTrace();}
-        catch(InterruptedException e) {e.printStackTrace();}
-        catch(Exception e) {e.printStackTrace();}
-        path.add(result_txt);
+        } catch (IOException e) { ErrorMsg.show(e); }
+        catch(InterruptedException e) { ErrorMsg.show(e); }
+        catch(Exception e) { ErrorMsg.show(e); }
+        path.add(resultTxt);
         return null;
     }
                         
     @Override
     protected void done() {
         int i = path.size() - 1;
-        wind_progress.succededWnpr(path.get(i));
+        windProgress.succededWnpr(path.get(i));
         path.remove(i);                            
     }
     
     public void execute(ArrayList<File> p, WindowProgress w) {
         path = p;
-        wind_progress = w;
+        windProgress = w;
         execute();
     }
     
@@ -211,12 +193,12 @@ public class Prs extends SwingWorker<Void, Void> {
         return array_paths;
     } 
     
-    private void printExecuteAndFetch(short flag, int count_variable, String name_variable_statement, String rs_name, FileWriter method_file) {
+    private void printExecuteAndFetch(short flag, int count_variable, String name_variable_statement, String rs_name, FileWriter methodFile) {
         
         try {  
-            method_file.write("\t\t" + name_variable_statement + ".execute();\r\n");
+            methodFile.write("\t\t" + name_variable_statement + ".execute();\r\n");
             if (flag > 0) {                
-                method_file.write("\t\tResultSet resProcCur_" + count_variable + " = (ResultSet)" +
+                methodFile.write("\t\tResultSet resProcCur_" + count_variable + " = (ResultSet)" +
                         name_variable_statement +
                         ".getObject(\"" +
                         rs_name + "\");\r\n\t\tfetchResultSet(null, " + 
@@ -224,24 +206,24 @@ public class Prs extends SwingWorker<Void, Void> {
                         ");\r\n");
             }
             if (flag != 1) {
-                method_file.write("\t\tResultSet resSet_" +
+                methodFile.write("\t\tResultSet resSet_" +
                         count_variable + " = " +
                         name_variable_statement +
                         ".getResultSet();\r\n\t\tfetchResultSet(null, " + 
                         "resSet_" + count_variable +
                         ");\r\n");
             }            
-            method_file.write("\r\n");          
-        } catch (IOException e) { e.printStackTrace(); }
+            methodFile.write("\r\n");          
+        } catch (IOException e) { ErrorMsg.show(e); }
     }
     
-    private boolean parsAction(BufferedReader reader_action, FileWriter busines_file, FileWriter method_file, HashMap<String, String> user_param) throws IOException {
+    private boolean parsAction(BufferedReader readerAction, FileWriter businesFile, FileWriter methodFile, HashMap<String, String> user_param) throws IOException {
         
         String line = null;
         String tmp;   
         
         try {
-            while ((line = reader_action.readLine()) != null && !line.contains("lrd_ora8_exec(")) {
+            while ((line = readerAction.readLine()) != null && !line.contains("lrd_ora8_exec(")) {
                 if (line.contains("/*")) {                   
                     do {                        
                         if (line.matches(".*uc_\\d{1,3}.*")) { 
@@ -249,7 +231,7 @@ public class Prs extends SwingWorker<Void, Void> {
                             if (tmp.endsWith("*/"))
                                 tmp = tmp.substring(0 , tmp.length() - 3);
                             validateParam(tmp);
-                            busines_file.write((is_open_uc ? "\t}\n\n\tpublic void " : "\tpublic void ") + tmp + "() throws SQLException  {");
+                            businesFile.write((is_open_uc ? "\t}\n\n\tpublic void " : "\tpublic void ") + tmp + "() throws SQLException  {");
                             if (!is_open_uc)
                                 is_open_uc = true;
                         }
@@ -258,8 +240,8 @@ public class Prs extends SwingWorker<Void, Void> {
                             if (tmp.endsWith("*/"))
                                 tmp = tmp.substring(0 , tmp.length() - 3);
                             validateParam(tmp);
-                            busines_file.write("\n\n\t\tcst." + tmp + "();\n");
-                            method_file.write((is_open_step ? "\t} \n\n\tpublic void " : "\tpublic void ") + tmp + "() throws SQLException {\n\n");
+                            businesFile.write("\n\n\t\tcst." + tmp + "();\n");
+                            methodFile.write((is_open_step ? "\t} \n\n\tpublic void " : "\tpublic void ") + tmp + "() throws SQLException {\n\n");
                             if (!is_open_step)
                                 is_open_step = true;
                         }
@@ -284,22 +266,43 @@ public class Prs extends SwingWorker<Void, Void> {
                             if (value.endsWith("*/"))
                                 value = value.substring(0 , value.length() - 3);                                                        
                             if (value.matches("^\\d*\\d$"))
-                                method_file.write("\t\tLong " + name + " = " + value + "L;\n");
+                                methodFile.write("\t\tLong " + name + " = " + value + "L;\n");
                             else
-                                method_file.write("\t\tString " + name + " = \"" + value + "\";\n");                            
+                                methodFile.write("\t\tString " + name + " = \"" + value + "\";\n");                            
                         }
                         if (line.contains("*/"))
                             break;
-                    } while ((line = reader_action.readLine()) != null); 
+                    } while ((line = readerAction.readLine()) != null); 
                 }
             }
-        } catch (Exception e) {e.printStackTrace();}
+        } catch (Exception e) { ErrorMsg.show(e); }
         
         return line != null ? true : false;
     }
     
     private void validateParam(String str) throws Exception {
         if (str.matches(".*\\W.*"))
-            throw new Exception("Not valid user comment" + str);
+            throw new Exception("Not valid user comment " + str);
     }
+    
+    public void paste(FileWriter toFile, String whatPaste) throws IOException {
+    	
+    	
+    	 File resultTxt = new File("forPaste.txt");
+    	
+    	System.out.println(resultTxt.getPath());
+    	BufferedReader readerLog = new BufferedReader(new InputStreamReader(new FileInputStream(resultTxt.getPath()), "windows-1251"));
+    	//BufferedReader resource = new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream("\\res\\forPaste.txt")));
+    	String line = "on start";
+    	if (readerLog.ready())
+    		System.out.println("ready");
+    	while ((line = readerLog.readLine()) != null) { 
+    		if (line.contains(whatPaste)) 
+    			break;
+    		System.out.println(line);
+    	}
+    	while ((line = readerLog.readLine()) != null && !line.equals("#########"))
+    		toFile.write(line);
+    	//resource.close();		
+	}
 }
