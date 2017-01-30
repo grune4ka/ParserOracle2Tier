@@ -37,12 +37,11 @@ public class Prs extends SwingWorker<Void, Void> {
             int i = 0; 
             HashMap<String, StringBuilder> quer = new HashMap<>();
             HashMap<String, String> user_param = new HashMap<>();
-            double procent = path.get(1).length(), lenght = 0.;            
-            businesFile.write("\npublic class Uc {\n\n\tprivate final Step cst;\n\n" + 
-                    "\tpublic Uc(Connection c) {\n\t\tcst  = new Step(c);\n\t}\n\n");
-            methodFile.write("\npublic class Step {\n\n" + 
-                    "\tprivate final Connection connection;\n\n" + 
-                    "\tpublic Step(Connection c) {\n\t\tconnection = c;\n\t}\n\n");
+            double procent = path.get(1).length(), lenght = 0.; 
+            
+            paste(businesFile, "##uc##");
+            paste(methodFile, "##step##");
+    
             while ((line = readerLog.readLine()) != null) {
                 if (is_exec) {
                     parsAction(readerAction, businesFile, methodFile, user_param);
@@ -287,22 +286,13 @@ public class Prs extends SwingWorker<Void, Void> {
     
     public void paste(FileWriter toFile, String whatPaste) throws IOException {
     	
-    	
-    	 File resultTxt = new File("forPaste.txt");
-    	
-    	System.out.println(resultTxt.getPath());
-    	BufferedReader readerLog = new BufferedReader(new InputStreamReader(new FileInputStream(resultTxt.getPath()), "windows-1251"));
-    	//BufferedReader resource = new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream("\\res\\forPaste.txt")));
-    	String line = "on start";
-    	if (readerLog.ready())
-    		System.out.println("ready");
-    	while ((line = readerLog.readLine()) != null) { 
-    		if (line.contains(whatPaste)) 
-    			break;
-    		System.out.println(line);
-    	}
-    	while ((line = readerLog.readLine()) != null && !line.equals("#########"))
-    		toFile.write(line);
-    	//resource.close();		
-	}
+    	BufferedReader resource = new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream("/res/forPaste.txt")));
+    	String line;    	
+    	while ((line = resource.readLine()) != null)  
+            if (line.contains(whatPaste)) 
+    		break;    	
+    	while ((line = resource.readLine()) != null && !line.equals("#########"))
+            toFile.write(line + "\n");        
+    	resource.close();		
+    }
 }
