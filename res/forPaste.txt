@@ -23,43 +23,56 @@ public class Step {
 #########
 ##fetch##
 
-    private HashMap<String, String> fetchResultSet(ArrayList<ParamsWithCoordinates> arr_prm, ResultSet result) throws SQLException {
+    private ArrayList<ParamsFetch> fetchResultSet(ArrayList<ParamsFetch> arr_prm, ResultSet result) throws SQLException {
         
-        int count_column = result.getMetaData().getColumnCount();
-        if (arr_prm == null)
-            while (result.next()) 
-                for (int i = 1; i <= count_column; i++) 
-                    result.getObject(i);
-        else {
-            HashMap<String, String> returnValue = new HashMap<>();
-            for (int row = 1; result.next(); row++) 
-                for (int column = 1; column <= count_column; column++) { 
-                    Object tmp = result.getObject(row);
-                    for (ParamsWithCoordinates ref : arr_prm) {
-                        if (row == ref.X && column == ref.Y)                                                            
-                            returnValue.put(ref.Name, (String)tmp);                                       
-                    }
-                }
-            return returnValue;
-        }       
+		if (result != null) {
+			int count_column = result.getMetaData().getColumnCount();
+			if (arr_prm == null)
+				while (result.next()) 
+					for (int i = 1; i <= count_column; i++) 
+						result.getObject(i);
+			else {
+				
+				for (int row = 1; result.next(); row++) 
+					for (int column = 1; column <= count_column; column++) { 
+						Object tmp = result.getObject(row);
+						for (ParamsFetch ref : arr_prm) {
+							if (row == ref.X && column == ref.Y)                                                            
+								ref.setValue((String)tmp);                                       
+						}
+					}
+				return returnValue;
+			} 
+		}		
         return null;
     }
+	
+    private ParamsFetch fetchResultSet(ParamsFetch prm, ResultSet result) throws SQLException {
+        ArrayList<ParamsFetch> tmp = new ArrayList<>();
+        tmp.add(prm);
+        return fetchResultSet(tmp, result).get(0);
+	}
 
-    class ParamsWithCoordinates {
+    class ParamsFetch {
         public final String Name;
         public final int X;
         public final int Y;
+		private String value = null;
 
-        public ParamsWithCoordinates(String Name, int X, int Y) {
+        public ParamsFetch(String Name, int X, int Y) {
             this.Name = Name;
             this.X = X;
             this.Y = Y;
         }
-
-        public boolean chekXY(int x, int y) {
-            return x == X && y == Y;
-        }
-    }
+		
+		public String getValue() {
+			return value;
+		}
+		
+		public void setValue(String v) {
+			value = v;
+		}
+	}		
 }
 
 #########

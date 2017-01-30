@@ -276,7 +276,7 @@ public class Prs extends SwingWorker<Void, Void> {
             }
         } catch (Exception e) { ErrorMsg.show(e); }
         
-        return line != null ? true : false;
+        return line != null;
     }
     
     private void validateParam(String str) throws Exception {
@@ -291,8 +291,8 @@ public class Prs extends SwingWorker<Void, Void> {
     	while ((line = resource.readLine()) != null)  
             if (line.contains(whatPaste)) 
     		break;    	
-    	while ((line = resource.readLine()) != null && !line.equals("#########"))
-            toFile.write(line + "\n");        
-    	resource.close();		
+        while ((line = resource.readLine())!= null && !line.equals("#########"))
+            toFile.write(line + "\n");
+        resource.close();		
     }
 }
