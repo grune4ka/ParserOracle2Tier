@@ -200,7 +200,7 @@ public class Prs extends SwingWorker<Void, Void> {
                 methodFile.write("\t\tResultSet resProcCur_" + count_variable + " = (ResultSet)" +
                         name_variable_statement +
                         ".getObject(\"" +
-                        rs_name + "\");\r\n\t\tfetchResultSet(null, " + 
+                        rs_name + "\");\r\n\t\tfetchResultSet(" + 
                         "resProcCur_" + count_variable +
                         ");\r\n");
             }
@@ -208,7 +208,7 @@ public class Prs extends SwingWorker<Void, Void> {
                 methodFile.write("\t\tResultSet resSet_" +
                         count_variable + " = " +
                         name_variable_statement +
-                        ".getResultSet();\r\n\t\tfetchResultSet(null, " + 
+                        ".getResultSet();\r\n\t\tfetchResultSet(" + 
                         "resSet_" + count_variable +
                         ");\r\n");
             }            

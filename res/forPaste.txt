@@ -52,6 +52,11 @@ public class Step {
 		tmp.add(prm);
 		return fetchResultSet(tmp, result).get(0);
 	}
+	
+	private ParamsFetch fetchResultSet(ResultSet result) throws SQLException {
+		ArrayList<ParamsFetch> tmp = null;		
+		return fetchResultSet(tmp, result);
+	}
 
 	class ParamsFetch {
 		public final String Name;
