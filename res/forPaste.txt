@@ -22,6 +22,8 @@ public class Step {
 
 #########
 ##fetch##
+    
+    }
 
 	private ArrayList<ParamsFetch> fetchResultSet(ArrayList<ParamsFetch> arr_prm, ResultSet result) throws SQLException {
         
@@ -41,20 +43,27 @@ public class Step {
 								ref.setValue((String)tmp);                                       
 						}
 					}
-				return returnValue;
+				return arr_prm;
 			} 
 		}		
 		return null;
 	}
 	
 	private ParamsFetch fetchResultSet(ParamsFetch prm, ResultSet result) throws SQLException {
-		ArrayList<ParamsFetch> tmp = new ArrayList<>();
-		tmp.add(prm);
-		return fetchResultSet(tmp, result).get(0);
+		ArrayList<ParamsFetch> tmp;
+                if (prm == null)
+                    tmp = null;
+                else {
+                    tmp = new ArrayList<>();
+                    tmp.add(prm);
+                    return fetchResultSet(tmp, result).get(0);
+                }
+		fetchResultSet(tmp, result);
+		return null;
 	}
 	
 	private ParamsFetch fetchResultSet(ResultSet result) throws SQLException {
-		ArrayList<ParamsFetch> tmp = null;		
+		ParamsFetch tmp = null;		
 		return fetchResultSet(tmp, result);
 	}
 

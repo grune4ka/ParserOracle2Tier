@@ -228,7 +228,7 @@ public class Prs extends SwingWorker<Void, Void> {
                         if (line.matches(".*uc_\\d{1,3}.*")) { 
                             tmp = line.substring(line.indexOf("uc_")).trim();                            
                             if (tmp.endsWith("*/"))
-                                tmp = tmp.substring(0 , tmp.length() - 3);
+                                tmp = tmp.substring(0 , tmp.length() - 2);
                             validateParam(tmp);
                             businesFile.write((is_open_uc ? "\t}\n\n\tpublic void " : "\tpublic void ") + tmp + "() throws SQLException  {");
                             if (!is_open_uc)
@@ -237,7 +237,7 @@ public class Prs extends SwingWorker<Void, Void> {
                         else if (line.matches(".*step_\\d{1,3}.*")) {
                             tmp = line.substring(line.indexOf("step_")).trim();                            
                             if (tmp.endsWith("*/"))
-                                tmp = tmp.substring(0 , tmp.length() - 3);
+                                tmp = tmp.substring(0 , tmp.length() - 2);
                             validateParam(tmp);
                             businesFile.write("\n\n\t\tcst." + tmp + "();\n");
                             methodFile.write((is_open_step ? "\t} \n\n\tpublic void " : "\tpublic void ") + tmp + "() throws SQLException {\n\n");
