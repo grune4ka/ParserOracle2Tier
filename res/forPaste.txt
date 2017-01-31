@@ -1,6 +1,10 @@
 #########
 ##uc##
 
+import java.sql.*;
+import java.util.ArrayList;
+import oracle.jdbc.internal.OracleTypes;
+
 public class Uc {
 
 	private final Step cst;
@@ -11,6 +15,10 @@ public class Uc {
 
 #########
 ##step##
+
+import java.sql.*;
+import java.util.ArrayList;
+import oracle.jdbc.internal.OracleTypes;
 
 public class Step {
 

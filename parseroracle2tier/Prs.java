@@ -23,8 +23,8 @@ public class Prs extends SwingWorker<Void, Void> {
     protected Void doInBackground() {
         
         File resultTxt = new File(path.get(path.size() - 1).getPath() + "\\SQL_Statement.txt");
-        File methodTxt = new File(path.get(path.size() - 1).getPath() + "\\Methods.java");
-        File businesTxt = new File(path.get(path.size() - 1).getPath() + "\\BusinesMethod.java");
+        File methodTxt = new File(path.get(path.size() - 1).getPath() + "\\Step.java");
+        File businesTxt = new File(path.get(path.size() - 1).getPath() + "\\Uc.java");
         
         try (BufferedReader readerAction = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(0).getPath()), "windows-1251"));
                 BufferedReader readerLog = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(1).getPath()), "windows-1251"));
