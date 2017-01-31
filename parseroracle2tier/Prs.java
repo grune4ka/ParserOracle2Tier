@@ -26,7 +26,7 @@ public class Prs extends SwingWorker<Void, Void> {
         File resultTxt = new File(pathForOpenFile + "\\SQL_Statement.txt");
         File methodTxt = new File(pathForOpenFile + "\\Step.java");
         File businesTxt = new File(pathForOpenFile + "\\Uc.java");
-        File actionTxt = new File(pathForOpenFile + "\\Action.java");
+        File actionTxt = new File(pathForOpenFile + "\\Actions.java");
         
         try (BufferedReader readerAction = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(0).getPath()), "windows-1251"));
                 BufferedReader readerLog = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(1).getPath()), "windows-1251"));
@@ -236,7 +236,7 @@ public class Prs extends SwingWorker<Void, Void> {
                             if (tmp.endsWith("*/"))
                                 tmp = tmp.substring(0 , tmp.length() - 2);
                             validateParam(tmp);
-                            actionFile.write("\t\t\t" + tmp + "();\n\n");
+                            actionFile.write("\t\t\tbusinessOperation." + tmp + "();\n\n");
                             businesFile.write((is_open_uc ? "\t}\n\n\tpublic void " : "\tpublic void ") + tmp + "() throws SQLException  {");
                             if (!is_open_uc)
                                 is_open_uc = true;

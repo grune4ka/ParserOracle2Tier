@@ -76,6 +76,8 @@ public class Actions
 
         try {
 
+            Uc businessOperation = new Uc(connection);
+
 #########
 ##fetch##
     
@@ -110,7 +112,7 @@ public class Actions
                 if (prm == null)
                     tmp = null;
                 else {
-                    tmp = new ArrayList<>();
+                    tmp = new ArrayList<ParamsFetch>();
                     tmp.add(prm);
                     return fetchResultSet(tmp, result).get(0);
                 }
