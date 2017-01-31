@@ -22,15 +22,18 @@ public class Prs extends SwingWorker<Void, Void> {
     @Override
     protected Void doInBackground() {
         
-        File resultTxt = new File(path.get(path.size() - 1).getPath() + "\\SQL_Statement.txt");
-        File methodTxt = new File(path.get(path.size() - 1).getPath() + "\\Step.java");
-        File businesTxt = new File(path.get(path.size() - 1).getPath() + "\\Uc.java");
+        String pathForOpenFile = path.get(path.size() - 1).getPath();
+        File resultTxt = new File(pathForOpenFile + "\\SQL_Statement.txt");
+        File methodTxt = new File(pathForOpenFile + "\\Step.java");
+        File businesTxt = new File(pathForOpenFile + "\\Uc.java");
+        File actionTxt = new File(pathForOpenFile + "\\Action.java");
         
         try (BufferedReader readerAction = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(0).getPath()), "windows-1251"));
                 BufferedReader readerLog = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(1).getPath()), "windows-1251"));
                 BufferedReader readeGrd = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(2).getPath()), "windows-1251"));
                 FileWriter resultFile = new FileWriter(resultTxt);
                 FileWriter methodFile = new FileWriter(methodTxt);
+                FileWriter actionFile = new FileWriter(actionTxt);
                 FileWriter businesFile = new FileWriter(businesTxt)) {
             String line;  
             
@@ -39,12 +42,13 @@ public class Prs extends SwingWorker<Void, Void> {
             HashMap<String, String> user_param = new HashMap<>();
             double procent = path.get(1).length(), lenght = 0.; 
             
-            paste(businesFile, "##uc##");
-            paste(methodFile, "##step##");
+            pasteText(actionFile, "##startAction##");
+            pasteText(businesFile, "##uc##");
+            pasteText(methodFile, "##step##");
     
             while ((line = readerLog.readLine()) != null) {
                 if (is_exec) {
-                    parsAction(readerAction, businesFile, methodFile, user_param);
+                    parsAction(readerAction, actionFile, businesFile, methodFile, user_param);
                     is_exec = false;
                 }
                 after_empty_execute_statement:
@@ -66,7 +70,7 @@ public class Prs extends SwingWorker<Void, Void> {
                     String statement = quer.get(line.substring(90, 108)).toString().replaceAll("(?<=[^\\t\\t\\t])\"(?!( \\+))", "\\\\\"");
                     String name_variable_statement;
                     count_variable++;
-                    if (statement.indexOf("begin") != -1) { 
+                    if (statement.contains("begin")) { 
                         name_variable_statement = "clSt_" + count_variable;
                         methodFile.write("\t\tCallableStatement " + 
                                 name_variable_statement + 
@@ -95,7 +99,7 @@ public class Prs extends SwingWorker<Void, Void> {
                         }
                         else if (++j > 3) {
                             if (tmp_prm == null) 
-                                tmp_prm = new HashMap<String, String>();
+                                tmp_prm = new HashMap<>();
                             
                             String tmp = ""; 
                             int index = 0;
@@ -137,7 +141,9 @@ public class Prs extends SwingWorker<Void, Void> {
                 setProgress((int)((lenght / procent) * 100));              
             }
             businesFile.write("\n\t}\n}");            
-            paste(methodFile, "##fetch##");            
+            pasteText(methodFile, "##fetch##");
+            pasteText(actionFile, "##stopAction##");
+            pasteFile(pathForOpenFile);
             setProgress(100);
             Thread.sleep(100);
         } catch (IOException e) { ErrorMsg.show(e); }
@@ -216,7 +222,7 @@ public class Prs extends SwingWorker<Void, Void> {
         } catch (IOException e) { ErrorMsg.show(e); }
     }
     
-    private boolean parsAction(BufferedReader readerAction, FileWriter businesFile, FileWriter methodFile, HashMap<String, String> user_param) throws IOException {
+    private boolean parsAction(BufferedReader readerAction, FileWriter actionFile, FileWriter businesFile, FileWriter methodFile, HashMap<String, String> user_param) throws IOException {
         
         String line = null;
         String tmp;   
@@ -230,6 +236,7 @@ public class Prs extends SwingWorker<Void, Void> {
                             if (tmp.endsWith("*/"))
                                 tmp = tmp.substring(0 , tmp.length() - 2);
                             validateParam(tmp);
+                            actionFile.write("\t\t\t" + tmp + "();\n\n");
                             businesFile.write((is_open_uc ? "\t}\n\n\tpublic void " : "\tpublic void ") + tmp + "() throws SQLException  {");
                             if (!is_open_uc)
                                 is_open_uc = true;
@@ -284,7 +291,7 @@ public class Prs extends SwingWorker<Void, Void> {
             throw new Exception("Not valid user comment " + str);
     }
     
-    public void paste(FileWriter toFile, String whatPaste) throws IOException {
+    public void pasteText(FileWriter toFile, String whatPaste) throws IOException {
     	
     	BufferedReader resource = new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream("/res/forPaste.txt")));
     	String line;    	
@@ -294,5 +301,23 @@ public class Prs extends SwingWorker<Void, Void> {
         while ((line = resource.readLine())!= null && !line.equals("#########"))
             toFile.write(line + "\n");
         resource.close();		
+    }
+    
+    public void pasteFile(String pathForOpenFile) throws IOException {
+        String[] files = { "Action.c", "Bookmarks.xml", "Breakpoints.xml", "CardPinInfo.dat",
+            "default.cfg", "default.usp", "Oracle2TierJava.prm", "Oracle2TierJava.prm.bak", "Oracle2TierJava.usr",
+            "ScriptUploadMetadata.xml", "UserTasks.xml", "vuser_end.c", "vuser_end.javas",
+            "vuser_init.c", "vuser_init.javas"};
+        String line;
+        for (String nameFile : files) {             
+            FileWriter copyFile = new FileWriter(new File(pathForOpenFile + "/" + nameFile));
+            BufferedReader resource = new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream("/res/forCopy/" + nameFile)));
+            while ((line = resource.readLine()) != null)
+                copyFile.write(line + "\n");
+            copyFile.close(); 
+            resource.close();
+        }
+        new File(pathForOpenFile + "/vuser_end.javas").renameTo(new File(pathForOpenFile + "/vuser_end.java"));
+        new File(pathForOpenFile + "/vuser_init.javas").renameTo(new File(pathForOpenFile + "/vuser_init.java"));
     }
 }

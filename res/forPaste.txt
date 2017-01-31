@@ -29,6 +29,54 @@ public class Step {
 	}
 
 #########
+##stopAction##
+
+        } catch (SQLException e) { lr.error_message("EXECUTE STATEMENT FAILED"); e.printStackTrace(); }
+
+		return 0;
+	}
+
+
+	public int end() throws Throwable {
+		return 0;
+	}
+}
+
+#########
+##startAction##
+
+import lrapi.lr;
+import java.sql.*;
+import java.util.Locale;
+
+public class Actions
+{
+	Connection connection = null;
+
+	public int init() throws Throwable {
+		
+		lr.save_string(lr.get_attrib_string("serverIP"), "serverIP");
+		lr.save_string(lr.get_attrib_string("port"), "port");
+		lr.save_string(lr.get_attrib_string("dbName"), "dbName");
+		lr.save_string(lr.get_attrib_string("login"), "login");
+		lr.save_string(lr.get_attrib_string("pasword"), "pasword");
+				
+		Locale.setDefault(Locale.ENGLISH);
+		try {			
+			Class.forName("oracle.jdbc.driver.OracleDriver");
+			connection = DriverManager.getConnection("jdbc:oracle:thin:@{serverIP}:{port}:{dbName}", "{login}", "{pasword}");
+		}
+		catch (ClassNotFoundException e) { lr.error_message("DRIVER NOT FOUND"); }
+		catch (SQLException e) { lr.error_message("CONNECTION FAILED"); e.printStackTrace(); }
+		return 0;
+	}
+
+
+	public int action() throws Throwable {
+
+        try {
+
+#########
 ##fetch##
     
     }
