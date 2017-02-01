@@ -64,7 +64,7 @@ public class Actions
 		Locale.setDefault(Locale.ENGLISH);
 		try {			
 			Class.forName("oracle.jdbc.driver.OracleDriver");
-			connection = DriverManager.getConnection("jdbc:oracle:thin:@" + serveIp + port + dbName, login, password);
+			connection = DriverManager.getConnection("jdbc:oracle:thin:@" + serverIp + port + dbName, login, password);
 		}
 		catch (ClassNotFoundException e) { lr.error_message("DRIVER NOT FOUND"); }
 		catch (SQLException e) { lr.error_message("CONNECTION FAILED"); e.printStackTrace(); }

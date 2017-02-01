@@ -45,10 +45,12 @@ public class Prs extends SwingWorker<Void, Void> {
             pasteText(actionFile, "##startAction##");
             pasteText(businesFile, "##uc##");
             pasteText(methodFile, "##step##");
-    
+            boolean endFile = false;
             while ((line = readerLog.readLine()) != null) {
-                if (is_exec) {
-                    parsAction(readerAction, actionFile, businesFile, methodFile, user_param);
+                if (is_exec) {                    
+                    if (endFile)
+                        throw new Exception("NOT VALID ACTION FILE (less then expected execute statement)");
+                    endFile = parsAction(readerAction, actionFile, businesFile, methodFile, user_param);
                     is_exec = false;
                 }
                 after_empty_execute_statement:
@@ -283,7 +285,7 @@ public class Prs extends SwingWorker<Void, Void> {
             }
         } catch (Exception e) { ErrorMsg.show(e); }
         
-        return line != null;
+        return line == null;
     }
     
     private void validateParam(String str) throws Exception {
