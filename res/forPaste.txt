@@ -55,16 +55,16 @@ public class Actions
 
 	public int init() throws Throwable {
 		
-		lr.save_string(lr.get_attrib_string("serverIP"), "serverIP");
-		lr.save_string(lr.get_attrib_string("port"), "port");
-		lr.save_string(lr.get_attrib_string("dbName"), "dbName");
-		lr.save_string(lr.get_attrib_string("login"), "login");
-		lr.save_string(lr.get_attrib_string("pasword"), "pasword");
+		String serverIp = lr.get_attrib_string("serverIp");
+		String port = lr.get_attrib_string("port");
+		String dbName = lr.get_attrib_string("dbName");
+		String login = lr.get_attrib_string("login");
+		String password = lr.get_attrib_string("password");
 				
 		Locale.setDefault(Locale.ENGLISH);
 		try {			
 			Class.forName("oracle.jdbc.driver.OracleDriver");
-			connection = DriverManager.getConnection("jdbc:oracle:thin:@{serverIP}:{port}:{dbName}", "{login}", "{pasword}");
+			connection = DriverManager.getConnection("jdbc:oracle:thin:@" + serveIp + port + dbName, login, password);
 		}
 		catch (ClassNotFoundException e) { lr.error_message("DRIVER NOT FOUND"); }
 		catch (SQLException e) { lr.error_message("CONNECTION FAILED"); e.printStackTrace(); }
@@ -91,8 +91,7 @@ public class Actions
 				while (result.next()) 
 					for (int i = 1; i <= count_column; i++) 
 						result.getObject(i);
-			else {
-			
+			else {			
 				for (int row = 1; result.next(); row++) 
 					for (int column = 1; column <= count_column; column++) { 
 						Object tmp = result.getObject(row);
