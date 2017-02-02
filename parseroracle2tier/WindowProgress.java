@@ -65,9 +65,9 @@ public class WindowProgress implements PropertyChangeListener {
         launch_btn.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent evetn) {
-                try {   
-                    ProcessBuilder proc = new ProcessBuilder(result_txt.getPath().substring(0, result_txt.getPath().length() - 18) + "Oracle2TierJava.usr");
-                    proc.start();
+                try {  
+                    Runtime r = Runtime.getRuntime();                     
+                    r.exec("cmd /c " + result_txt.getPath().substring(0, result_txt.getPath().length() - 18) + "\\Oracle2TierJava.usr");
                 } catch (IOException e) { ErrorMsg.show(e); }
             }        
         });
