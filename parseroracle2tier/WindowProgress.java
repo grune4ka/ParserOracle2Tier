@@ -59,6 +59,18 @@ public class WindowProgress implements PropertyChangeListener {
     
     public void succededWnpr(File r_txt) {
         
+        final JButton launch_btn = new JButton();
+        launch_btn.setBounds(380, 40, 100, 30); 
+        launch_btn.setText("Launch LR");
+        launch_btn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent evetn) {
+                try {   
+                    ProcessBuilder proc = new ProcessBuilder(result_txt.getPath().substring(0, result_txt.getPath().length() - 18) + "Oracle2TierJava.usr");
+                    proc.start();
+                } catch (IOException e) { ErrorMsg.show(e); }
+            }        
+        });
         result_txt = r_txt;
         pb.setValue(100);        
         for (int i = 0; i < 2; i++) {
@@ -72,6 +84,7 @@ public class WindowProgress implements PropertyChangeListener {
             panel.add(succes);
         }       
         manag_btn.setText("Open folder");
+        panel.add(launch_btn);
         panel.remove(pb);
         panel.remove(procent);
         panel.updateUI();
