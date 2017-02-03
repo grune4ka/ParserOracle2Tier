@@ -4,8 +4,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import javax.swing.*;
 import java.util.*;
@@ -306,20 +308,16 @@ public class Prs extends SwingWorker<Void, Void> {
     }
     
     public void pasteFile(String pathForOpenFile) throws IOException {
-        String[] files = { "Action.c", "Bookmarks.xml", "Breakpoints.xml", "CardPinInfo.dat",
-            "default.cfg", "default.usp", "Oracle2TierJava.prm", "Oracle2TierJava.prm.bak", "Oracle2TierJava.usr",
-            "ScriptUploadMetadata.xml", "UserTasks.xml", "vuser_end.c", "vuser_end.javas",
-            "vuser_init.c", "vuser_init.javas"};
-        String line;
-        for (String nameFile : files) {             
-            FileWriter copyFile = new FileWriter(new File(pathForOpenFile + "/" + nameFile));
-            BufferedReader resource = new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream("/res/forCopy/" + nameFile)));
-            while ((line = resource.readLine()) != null)
-                copyFile.write(line + "\n");
-            copyFile.close(); 
-            resource.close();
+        
+        File directory = new File(getClass().getResource("/res/forCopy/").getPath());       
+        for (File file : directory.listFiles()) { 
+            FileChannel res = new FileInputStream(file).getChannel();
+            FileChannel des = new FileOutputStream(pathForOpenFile + "/" + file.getName()).getChannel();
+            des.transferFrom(res, 0, res.size());           
+            res.close();
+            des.close();
         }
-        new File(pathForOpenFile + "/vuser_end.javas").renameTo(new File(pathForOpenFile + "/vuser_end.java"));
-        new File(pathForOpenFile + "/vuser_init.javas").renameTo(new File(pathForOpenFile + "/vuser_init.java"));
+        new File(pathForOpenFile + "/vuser_end.java").createNewFile();
+        new File(pathForOpenFile + "/vuser_init.java").createNewFile();
     }
 }
