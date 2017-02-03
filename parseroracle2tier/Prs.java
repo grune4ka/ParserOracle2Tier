@@ -6,7 +6,9 @@ import java.io.FileWriter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import javax.swing.*;
@@ -309,13 +311,17 @@ public class Prs extends SwingWorker<Void, Void> {
     
     public void pasteFile(String pathForOpenFile) throws IOException {
         
-        File directory = new File(getClass().getResource("/res/forCopy/").getPath());       
-        for (File file : directory.listFiles()) { 
-            FileChannel res = new FileInputStream(file).getChannel();
-            FileChannel des = new FileOutputStream(pathForOpenFile + "/" + file.getName()).getChannel();
-            des.transferFrom(res, 0, res.size());           
-            res.close();
-            des.close();
+        String[] nameFile = { "Action.c", "Bookmarks.xml", "Breakpoints.xml", "CardPinInfo.dat", 
+            "Oracle2TierJava.prm", "Oracle2TierJava.prm.bak", "Oracle2TierJava.usr", "ScriptUploadMetadata.xml", 
+            "UserTasks.xml", "default.cfg", "default.usp", "vuser_end.c", "vuser_init.c" };             
+        for (String name : nameFile) {           
+            FileWriter out = new FileWriter(pathForOpenFile + "/" + name);
+            InputStream in = getClass().getResourceAsStream("/res/forCopy/" + name);
+            int sym;
+            while ((sym = in.read()) != -1)               
+                out.write(sym);            
+            out.close();
+            in.close();
         }
         new File(pathForOpenFile + "/vuser_end.java").createNewFile();
         new File(pathForOpenFile + "/vuser_init.java").createNewFile();
