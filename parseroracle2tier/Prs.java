@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -314,12 +315,13 @@ public class Prs extends SwingWorker<Void, Void> {
         String[] nameFile = { "Action.c", "Bookmarks.xml", "Breakpoints.xml", "CardPinInfo.dat", 
             "Oracle2TierJava.prm", "Oracle2TierJava.prm.bak", "Oracle2TierJava.usr", "ScriptUploadMetadata.xml", 
             "UserTasks.xml", "default.cfg", "default.usp", "vuser_end.c", "vuser_init.c" };             
-        for (String name : nameFile) {           
+        for (String name : nameFile) {   
+            System.out.println(name);
             FileWriter out = new FileWriter(pathForOpenFile + "/" + name);
-            InputStream in = getClass().getResourceAsStream("/res/forCopy/" + name);
-            int sym;
-            while ((sym = in.read()) != -1)               
-                out.write(sym);            
+            BufferedReader in = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/res/forCopy/" + name)));
+            String line;
+            while ((line = in.readLine()) != null)               
+                out.write(line + "\r\n");            
             out.close();
             in.close();
         }
