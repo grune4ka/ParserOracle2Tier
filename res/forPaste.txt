@@ -14,6 +14,7 @@ public class Uc {
 #########
 ##step##
 
+import lrapi.lr;
 import java.sql.*;
 import java.util.ArrayList;
 import oracle.jdbc.internal.OracleTypes;
@@ -25,11 +26,11 @@ public class Step {
     public void newSession() throws SQLException { 
         try {
             pullConnections.add(DriverManager.getConnection("jdbc:oracle:thin:@" + 
-                    Actions.serverIp + 
-                    Actions.port + 
-                    Actions.dbName, 
-                    Actions.login, 
-                    Actions.password));
+                    lr.eval_string("{serverIp}") + 
+                    lr.eval_string("{port}") + 
+                    lr.eval_string("{dbName}"), 
+                    lr.eval_string("{login}"), 
+                    lr.eval_string("{password}")));
         }
         catch (SQLException e) { lr.error_message("CONNECTION FAILED"); throw e; }
     }
@@ -37,7 +38,7 @@ public class Step {
 #########
 ##stopAction##
 
-    } catch (SQLException e) { lr.error_message("EXECUTE STATEMENT FAILED"); e.printStackTrace(); }
+        } catch (SQLException e) { lr.error_message("EXECUTE STATEMENT FAILED"); e.printStackTrace(); }
 
         return 0;
     }
@@ -57,28 +58,21 @@ import java.util.Locale;
 
 public class Actions
 {
-    public static final String serverIp;
-    public static final String port;
-    public static final String dbName;
-    public static final String login;
-    public static final String password;
-    
-    static {
-        serverIp = lr.get_attrib_string("serverIp");
-        port = lr.get_attrib_string("port");
-        dbName = lr.get_attrib_string("dbName");
-        login = lr.get_attrib_string("login");
-        password = lr.get_attrib_string("password");        
-    }
-
     public int init() throws Throwable {		
 				
         Locale.setDefault(Locale.ENGLISH);
+
+        lr.save_string(lr.get_attrib_string("serverIp"), "serverIp");
+        lr.save_string(lr.get_attrib_string("port"), "port");
+        lr.save_string(lr.get_attrib_string("dbName"), "dbName");
+        lr.save_string(lr.get_attrib_string("login"), "login");
+        lr.save_string(lr.get_attrib_string("password"), "password");
+
         try {
 		
             Class.forName("oracle.jdbc.driver.OracleDriver");
         }
-        catch (ClassNotFoundException e) { lr.error_message("DRIVER NOT FOUND"); }
+        catch (ClassNotFoundException e) { lr.error_message("SQL DRIVER NOT FOUND"); }
 		
         return 0;
     }
@@ -95,67 +89,92 @@ public class Actions
     
     }
 
-    private ArrayList<ParamsFetch> fetchResultSet(ArrayList<ParamsFetch> arr_prm, ResultSet result) throws SQLException {
+     private ParamsFetch fetchResultSet(ParamsFetch listPrm, ResultSet result) throws SQLException {
         
         if (result != null) {
             int count_column = result.getMetaData().getColumnCount();
-            if (arr_prm == null)
+            if (listPrm == null)
                 while (result.next()) 
                     for (int i = 1; i <= count_column; i++) 
                         result.getObject(i);
             else {			
                 for (int row = 1; result.next(); row++) 
                     for (int column = 1; column <= count_column; column++) { 
-                        Object tmp = result.getObject(row);
-                        for (ParamsFetch ref : arr_prm) {
+                        Object tmp = result.getObject(row);                        
+                        for (ParamsFetch ref : listPrm) 
                             if (row == ref.X && column == ref.Y)                                                            
-                                ref.setValue((String)tmp);                                       
-                        }
+                                ref.setValue((String)tmp); 
                     }
-                return arr_prm;
+                return listPrm;
             } 
         }		
         return null;
     }
-	
-    private ParamsFetch fetchResultSet(ParamsFetch prm, ResultSet result) throws SQLException {
-        ArrayList<ParamsFetch> tmp;
-        if (prm == null)
-            tmp = null;
-        else {
-            tmp = new ArrayList<ParamsFetch>();
-            tmp.add(prm);
-            return fetchResultSet(tmp, result).get(0);
-        }
-        fetchResultSet(tmp, result);
-        return null;
-    }
-	
-    private ParamsFetch fetchResultSet(ResultSet result) throws SQLException {
-        ParamsFetch tmp = null;		
-        return fetchResultSet(tmp, result);
-    }
 
-    class ParamsFetch {
+    private class ParamsFetch implements Iterable<ParamsFetch> {
         public final String Name;
         public final int X;
         public final int Y;
-        private String value = null;
+        private ParamsFetch next = null;
+        private String value = null;         
 
         public ParamsFetch(String Name, int X, int Y) {
             this.Name = Name;
             this.X = X;
             this.Y = Y;
         }
-		
+        
+        public String getValue(String key) {
+            ParamsFetch tmp = this;
+            while (!tmp.Name.equals(key) && tmp.next != null)
+                tmp = tmp.next;
+            if (tmp.Name.equals(key))
+                return tmp.value;
+            return null;
+        }
+        
         public String getValue() {
             return value;
         }
 		
-        public void setValue(String v) {
-            value = v;
+        public void setValue(String key, String value) {
+            ParamsFetch tmp = this;
+            while (!tmp.Name.equals(key) && tmp.next != null)
+                tmp = tmp.next;
+            if (tmp.Name.equals(key)) 
+                tmp.value = value;
+        }      
+        
+        public void setValue(String val) {
+            value = val;
         }
-    }		
+        
+        public void add(String Name, int X, int Y) {
+            ParamsFetch tmp = this;            
+            while (tmp.next != null)                
+                tmp = tmp.next;            
+            tmp.next = new ParamsFetch(Name, X, Y);           
+        }
+        
+        @Override
+        public Iterator iterator() {
+            return new iter();
+        }
+        
+        private  class iter implements  Iterator<ParamsFetch> {           
+            private ParamsFetch curr = ParamsFetch.this;
+
+            @Override
+            public boolean hasNext() {  
+                return curr.next != null;
+            }
+
+            @Override
+            public ParamsFetch next() { 
+                return curr = curr.next;
+            }          
+        }
+    } 
 }
 
 #########

@@ -41,7 +41,7 @@ public class Prs extends SwingWorker<Void, Void> {
             HashMap<String, StringBuilder> quer = new HashMap<>();
             HashMap<String, String> user_param = new HashMap<>();
             HashMap<String, Short> number_connection = new HashMap<>();
-            short n_con = 0;
+            short n_con = -1;
             double procent = path.get(1).length(), lenght = 0.; 
             
             pasteText(actionFile, "##startAction##");
