@@ -4,13 +4,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import javax.swing.*;
 import java.util.*;
@@ -45,6 +40,8 @@ public class Prs extends SwingWorker<Void, Void> {
             int i = 0; 
             HashMap<String, StringBuilder> quer = new HashMap<>();
             HashMap<String, String> user_param = new HashMap<>();
+            HashMap<String, Short> number_connection = new HashMap<>();
+            short n_con = 0;
             double procent = path.get(1).length(), lenght = 0.; 
             
             pasteText(actionFile, "##startAction##");
@@ -71,17 +68,23 @@ public class Prs extends SwingWorker<Void, Void> {
                     resultFile.write(System.lineSeparator() + System.lineSeparator() + ++i + ")" + System.lineSeparator());
                     quer.put(key, acum_statem);                    
                 }
+                else if (line.contains("OCISessionBegin")) {
+                    //System.out.println(line.substring(81, 89));
+                    methodFile.write("\n\t\tnewSession();\n");
+                    number_connection.put(line.substring(81, 89), ++n_con);
+                }
                 else if (line.contains("OCIStmtExecute")) {                    
                     is_exec = true;
                     int j = 0; 
                     String statement = quer.get(line.substring(90, 108)).toString().replaceAll("(?<=[^\\t\\t\\t])\"(?!( \\+))", "\\\\\"");
                     String name_variable_statement;
                     count_variable++;
+                    
                     if (statement.contains("begin")) { 
                         name_variable_statement = "clSt_" + count_variable;
                         methodFile.write("\t\tCallableStatement " + 
                                 name_variable_statement + 
-                                " = connection.prepareCall(\n" +
+                                " = pullConnections.get(" + number_connection.get(line.substring(80, 88)) + ").prepareCall(\n" +
                                 statement +
                                 "\");\n"); 
                     }
@@ -89,7 +92,7 @@ public class Prs extends SwingWorker<Void, Void> {
                         name_variable_statement = "prSt_" + count_variable;
                         methodFile.write("\t\tPreparedStatement " + 
                                 name_variable_statement + 
-                                " = connection.prepareStatement(\n" +
+                                " = pullConnections.get(" + number_connection.get(line.substring(80, 88)) + ").prepareStatement(\n" +
                                 statement +
                                 "\");\n"); 
                     }
@@ -315,8 +318,7 @@ public class Prs extends SwingWorker<Void, Void> {
         String[] nameFile = { "Action.c", "Bookmarks.xml", "Breakpoints.xml", "CardPinInfo.dat", 
             "Oracle2TierJava.prm", "Oracle2TierJava.prm.bak", "Oracle2TierJava.usr", "ScriptUploadMetadata.xml", 
             "UserTasks.xml", "default.cfg", "default.usp", "vuser_end.c", "vuser_init.c" };             
-        for (String name : nameFile) {   
-            System.out.println(name);
+        for (String name : nameFile) { 
             FileWriter out = new FileWriter(pathForOpenFile + "/" + name);
             BufferedReader in = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/res/forCopy/" + name)));
             String line;

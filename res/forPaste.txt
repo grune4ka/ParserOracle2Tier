@@ -2,15 +2,13 @@
 ##uc##
 
 import java.sql.*;
-import java.util.ArrayList;
-import oracle.jdbc.internal.OracleTypes;
 
 public class Uc {
 
 	private final Step cst;
 
-	public Uc(Connection c) {
-		cst  = new Step(c);
+	public Uc() {
+		cst = new Step();
 	}
 
 #########
@@ -22,10 +20,18 @@ import oracle.jdbc.internal.OracleTypes;
 
 public class Step {
 
-	private final Connection connection;
+	private final ArrayList<Connection> pullConnections = new ArrayList<Connection>();
 
-	public Step(Connection c) {
-		connection = c;
+	public void newSession() throws SQLException { 
+                try {
+                    pullConnections.add(DriverManager.getConnection("jdbc:oracle:thin:@" + 
+                            Actions.serverIp + 
+                            Actions.port + 
+                            Actions.dbName, 
+                            Actions.login, 
+                            Actions.password));
+                }
+                catch (SQLException e) { lr.error_message("CONNECTION FAILED"); throw e; }
 	}
 
 #########
@@ -51,28 +57,33 @@ import java.util.Locale;
 
 public class Actions
 {
-	Connection connection = null;
+    public static final String serverIp;
+    public static final String port;
+    public static final String dbName;
+    public static final String login;
+    public static final String password;
+    
+    static {
+        serverIp = lr.get_attrib_string("serverIp");
+        port = lr.get_attrib_string("port");
+        dbName = lr.get_attrib_string("dbName");
+        login = lr.get_attrib_string("login");
+        password = lr.get_attrib_string("password");        
+    }
 
-	public int init() throws Throwable {
-		
-		String serverIp = lr.get_attrib_string("serverIp");
-		String port = lr.get_attrib_string("port");
-		String dbName = lr.get_attrib_string("dbName");
-		String login = lr.get_attrib_string("login");
-		String password = lr.get_attrib_string("password");
+    public int init() throws Throwable {		
 				
-		Locale.setDefault(Locale.ENGLISH);
-		try {			
-			Class.forName("oracle.jdbc.driver.OracleDriver");
-			connection = DriverManager.getConnection("jdbc:oracle:thin:@" + serverIp + port + dbName, login, password);
-		}
-		catch (ClassNotFoundException e) { lr.error_message("DRIVER NOT FOUND"); }
-		catch (SQLException e) { lr.error_message("CONNECTION FAILED"); e.printStackTrace(); }
-		return 0;
-	}
+        Locale.setDefault(Locale.ENGLISH);
+        try {			
+            Class.forName("oracle.jdbc.driver.OracleDriver");
+        }
+        catch (ClassNotFoundException e) { lr.error_message("DRIVER NOT FOUND"); }
+		
+        return 0;
+    }
 
 
-	public int action() throws Throwable {
+    public int action() throws Throwable {
 
         try {
 
