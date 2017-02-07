@@ -18,6 +18,7 @@ public class Prs extends SwingWorker<Void, Void> {
     private boolean is_open_step = false;
     private boolean is_open_uc = false;
     private boolean is_exec = true;
+    private HashMap<String, ArrayList<String>> prmStatement = new HashMap<>();
     
     @Override
     protected Void doInBackground() {
@@ -30,7 +31,7 @@ public class Prs extends SwingWorker<Void, Void> {
         
         try (BufferedReader readerAction = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(0).getPath()), "windows-1251"));
                 BufferedReader readerLog = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(1).getPath()), "windows-1251"));
-                BufferedReader readeGrd = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(2).getPath()), "windows-1251"));
+                BufferedReader readerVdf = new BufferedReader(new InputStreamReader(new FileInputStream(path.get(2).getPath()), "windows-1251"));
                 FileWriter resultFile = new FileWriter(resultTxt);
                 FileWriter methodFile = new FileWriter(methodTxt);
                 FileWriter actionFile = new FileWriter(actionTxt);
@@ -38,9 +39,9 @@ public class Prs extends SwingWorker<Void, Void> {
             String line;  
             
             int i = 0; 
-            HashMap<String, StringBuilder> quer = new HashMap<>();
-            HashMap<String, String> user_param = new HashMap<>();
+            HashMap<String, StringBuilder> quer = new HashMap<>();           
             HashMap<String, Short> number_connection = new HashMap<>();
+            HashMap<String, String> type_param = new HashMap<>();
             short n_con = -1;
             double procent = path.get(1).length(), lenght = 0.; 
             
@@ -52,7 +53,7 @@ public class Prs extends SwingWorker<Void, Void> {
                 if (is_exec) {                    
                     if (endFile)
                         throw new Exception("NOT VALID ACTION FILE (less then expected execute statement)");
-                    endFile = parsAction(readerAction, actionFile, businesFile, methodFile, user_param);
+                    endFile = parsAction(readerAction, readerVdf, actionFile, businesFile, methodFile, type_param);
                     is_exec = false;
                 }
                 after_empty_execute_statement:
@@ -69,7 +70,7 @@ public class Prs extends SwingWorker<Void, Void> {
                     quer.put(key, acum_statem);                    
                 }
                 else if (line.contains("OCISessionBegin")) {
-                    //System.out.println(line.substring(81, 89));
+                    
                     methodFile.write("\n\t\tnewSession();\n");
                     number_connection.put(line.substring(81, 89), ++n_con);
                 }
@@ -117,19 +118,30 @@ public class Prs extends SwingWorker<Void, Void> {
                             while (pr_name.compareToIgnoreCase(tmp = statement.substring(index, index + pr_name.length())) != 0) 
                                 index = statement.indexOf(":", index) + 1;                                                                            
                             pr_name = tmp; 
+                            String tp = type_param.get(pr_name.toUpperCase());
+                            if (tp == null) 
+                                tp = type_param.get(pr_name.replace("__", "_").toUpperCase());
+                            
                             if (statement.matches("[\\s\\S]*" + pr_name + "\\s*:=[\\s\\S]*")) {
                                 flag_result_set = 1;
                                 if (statement.contains("select"))
                                     flag_result_set = 2;
                                 rs_name = pr_name;
-                                tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".registerOutParameter(\"" + pr_name + "\", OracleTypes.CURSOR);\r\n");
+                                if (tp.equals("CursorName"))
+                                    tp = "CURSOR";
+                                tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".registerOutParameter(\"" + pr_name + "\", OracleTypes." + tp.toUpperCase() + ");\r\n");
                                 continue;
                             }
                             String value = line.substring(line.indexOf('=') + 1);
-                            if (value.matches("^\\d*\\d$"))
-                                tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".setLong(\"" + pr_name + "\", " + value + "L);\r\n");
+                            if (value.equals("[Null]"))
+                                value = "null";                   
+                            if (value.equals("null"))
+                                tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", " + value + ");\r\n");                        
+                            else if (!tp.equals("Double"))
+                                tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", \"" + value + "\");\r\n");
                             else
-                                tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".setString(\"" + pr_name + "\", \"" + value + "\");\r\n");
+                                tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", " + value + ".);\r\n");                            
+                                
                         }                        
                     }
                     if (tmp_prm != null) {
@@ -179,15 +191,13 @@ public class Prs extends SwingWorker<Void, Void> {
     public static ArrayList<File> checkDirectory(File path, ArrayList<JLabel> content) {
         
         ArrayList<File> array_paths = new ArrayList<>();
-        String name_file = path.getName();
-        
-        String str_path = path.getPath().replace(name_file, "");
-        String name_grd = str_path.substring(str_path.substring(0, str_path.length() - 2).lastIndexOf('\\') + 1, str_path.length() - 1) + ".grd";
+        String name_file = path.getName();        
+        String str_path = path.getPath().replace(name_file, "");        
               
         if (name_file.equals("Action.c") || name_file.equals("vuser_init.c") || name_file.equals("vuser_end.c")) {
             array_paths.add(path);
             array_paths.add(new File(str_path + "data\\RecordingLog.txt"));            
-            array_paths.add(new File(str_path + name_grd));            
+            array_paths.add(new File(str_path + "data\\vdf.h"));            
             for (int i = 1; i < array_paths.size(); i++) 
                 if (!array_paths.get(i).exists())
                     return null;
@@ -197,11 +207,8 @@ public class Prs extends SwingWorker<Void, Void> {
             if (content.size() == 1)
                 for (int i = 0; i < array_paths.size() - 1; i++) 
                     content.add(new JLabel(array_paths.get(i).getName()));
-            if (!content.get(1).getText().equals(name_file)) {
-                if (!content.get(3).getText().equals(name_grd)) 
-                    content.get(3).setText(name_grd);
-                content.get(1).setText(name_file);
-            }
+            if (!content.get(1).getText().equals(name_file))                
+                content.get(1).setText(name_file);            
         }           
         else 
             return null;
@@ -232,7 +239,7 @@ public class Prs extends SwingWorker<Void, Void> {
         } catch (IOException e) { ErrorMsg.show(e); }
     }
     
-    private boolean parsAction(BufferedReader readerAction, FileWriter actionFile, FileWriter businesFile, FileWriter methodFile, HashMap<String, String> user_param) throws IOException {
+    private boolean parsAction(BufferedReader readerAction, BufferedReader readerVdf,FileWriter actionFile, FileWriter businesFile, FileWriter methodFile, HashMap<String, String> param_types) throws IOException {
         
         String line = null;
         String tmp;   
@@ -290,6 +297,46 @@ public class Prs extends SwingWorker<Void, Void> {
                             break;
                     } while ((line = readerAction.readLine()) != null); 
                 }
+                if (line.contains("lrd_ora8_bind_placeholder")) {
+                    int index_begin_stm = line.indexOf("eholder(OraStm") + 8;
+                    int index_begin_prm = line.indexOf(" &", index_begin_stm + 16) + 2;
+                    String stm = line.substring(index_begin_stm, line.indexOf(", ", index_begin_stm));
+                    String prm = line.substring(index_begin_prm, line.indexOf(", ", index_begin_prm));
+                    if (prmStatement.get(stm) == null)
+                        prmStatement.put(stm, new ArrayList<>());
+                    prmStatement.get(stm).add(prm);
+                   
+                }
+            }
+            if (line != null) {
+            String stm = line.substring(line.indexOf("OraStm"), line.indexOf(", ", line.indexOf("OraStm")));
+                if (prmStatement.get(stm) != null) {
+                    param_types.clear();
+                    for (String prm : prmStatement.get(stm)) {
+                        while ((line = readerVdf.readLine()) != null)
+                            if (line.contains(prm)) {
+                                while ((line = readerVdf.readLine()) != null)
+                                    if (line.contains("DT_"))
+                                        break;
+                                break;
+                            }
+                        if (line == null)
+                            throw new Exception("ERORR VDF.H FILE");
+                        int index_begin_type = line.indexOf("DT_") + 3;
+                        String tp = null;
+                        switch (line.substring(index_begin_type, line.indexOf("};", index_begin_type))) {
+                            case "FLT8" : case "INT4" : tp = "Double"; break;
+                            case "SZ" : tp = "String"; break;
+                            case "OCI_REFCURSOR": tp = "CursorName"; break;
+                            case "OCI_BLOB" : tp = "Blob"; break;
+                            case "OCI_CLOB" : tp = "Clob"; break;                            
+                            case "DATETIME" : tp = "Date"; break;
+                            default: throw new Exception("UNKNOWN SQL TYPE");
+                        }
+                        param_types.put(prm.substring(prm.startsWith("_") ? 1 : 0, prm.lastIndexOf("_")), tp);
+                    }
+                }
+                //prmStatement.remove(stm);
             }
         } catch (Exception e) { ErrorMsg.show(e); }
         

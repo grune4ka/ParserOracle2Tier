@@ -160,7 +160,7 @@ public class Actions
         }
         
           @Override
-            public Iterator iterator() {
+            public Iterator<ParamsFetch> iterator() {
                 return new iter();
             }
         
