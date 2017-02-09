@@ -17,7 +17,6 @@ public class Uc {
 import lrapi.lr;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Iterator;
 import oracle.jdbc.internal.OracleTypes;
 
 public class Step {
@@ -27,8 +26,8 @@ public class Step {
     public void newSession() throws SQLException { 
         try {
             pullConnections.add(DriverManager.getConnection("jdbc:oracle:thin:@" + 
-                    lr.eval_string("{serverIp}") + 
-                    lr.eval_string("{port}") + 
+                    lr.eval_string("{serverIp}") + ":" + 
+                    lr.eval_string("{port}") + ":" + 
                     lr.eval_string("{dbName}"), 
                     lr.eval_string("{login}"), 
                     lr.eval_string("{password}")));

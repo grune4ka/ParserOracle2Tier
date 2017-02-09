@@ -145,9 +145,11 @@ public class Prs extends SwingWorker<Void, Void> {
                                 continue;
                             }
                             String value = line.substring(line.indexOf('=') + 1);
+                            if (tp.equals("DATE"))
+                                tp = "String";
                             if (value.equals("[Null]"))
                                 if (tp.equals("Long") || tp.equals("Double"))
-                                    tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", " + (tp.equals("Long") ? "0);\r\n" : "0.);\r\n"));
+                                    tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", " + (tp.equals("Long") ? "0L);\r\n" : "0.);\r\n"));
                                 else
                                     tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", null);\r\n");
                             else
@@ -249,7 +251,7 @@ public class Prs extends SwingWorker<Void, Void> {
                 methodFile.write("\t\tResultSet resProcCur_" + count_variable + " = (ResultSet)" +
                         name_variable_statement +
                         ".getObject(\"" +
-                        rs_name + "\");\r\n\t\tfetchResultSet(null, resProcCur_" + 
+                        rs_name + "\");\r\n\t\tParamsFetch.fetchResultSet(null, resProcCur_" + 
                         count_variable +
                         ");\r\n");
             }
@@ -257,7 +259,7 @@ public class Prs extends SwingWorker<Void, Void> {
                 methodFile.write("\t\tResultSet resSet_" +
                         count_variable + " = " +
                         name_variable_statement +
-                        ".getResultSet();\r\n\t\tfetchResultSet(null, resSet_" + 
+                        ".getResultSet();\r\n\t\tParamsFetch.fetchResultSet(null, resSet_" + 
                         count_variable +
                         ");\r\n");
             }            
@@ -407,11 +409,11 @@ public class Prs extends SwingWorker<Void, Void> {
                      switch (type) {
                             case "FLT8": type = "Double"; break;
                             case "INT4": type = "Long"; break;
-                            case "DATETIME" : case "SZ" : type = "String"; break;
+                            case "SZ" : type = "String"; break;
                             case "OCI_REFCURSOR": type = "CursorName"; break;
                             case "OCI_BLOB": type = "Blob"; break;
                             case "OCI_CLOB": type = "Clob"; break;                            
-                            //case "DATETIME": type = "Date"; break;
+                            case "DATETIME": type = "DATE"; break;
                             default: throw new Exception("UNKNOWN SQL TYPE");
                         }                     
                      typeParam.put(prm, type);
