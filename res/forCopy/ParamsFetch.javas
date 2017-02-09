@@ -17,7 +17,7 @@ public class ParamsFetch implements Iterable<ParamsFetch> {
         this.Y = Y;
     }
         
-    private static ParamsFetch fetchResultSet(ParamsFetch listPrm, ResultSet result) throws SQLException {
+    public static ParamsFetch fetchResultSet(ParamsFetch listPrm, ResultSet result) throws SQLException {
         
 		if (result != null) {
 			int count_column = result.getMetaData().getColumnCount();
