@@ -18,6 +18,7 @@ public class Prs extends SwingWorker<Void, Void> {
     private boolean is_open_step = false;
     private boolean is_open_uc = false;
     private boolean is_exec = true;
+    private boolean is_new_step = true;
     private HashMap<String, HashMap<String, String>> prmStatement = new HashMap<>();
     private TypeParam vdfFileTypes;
     
@@ -61,8 +62,7 @@ public class Prs extends SwingWorker<Void, Void> {
                 after_empty_execute_statement:
                 if (line.contains("OCIStmtPrepare")) {
                     StringBuilder acum_statem = new StringBuilder("\t\t\t\t\t" + line.substring(line.indexOf("=") + 1));                    
-                    String key = getMatch("(?<=OCIStmtPrepare\\().{15,25}(?=, )", line, 40); 
-                    //System.out.println("insert " + key);
+                    String key = getMatch("(?<=OCIStmtPrepare\\().{15,25}(?=, )", line, 40);                    
                     resultFile.write(line.indexOf("=") + 2);
                     while (!(line = readerLog.readLine()).contains("[OCI_SUCCESS]")) {
                         acum_statem.append(" \" + \r\n\t\t\t\t\t\"");
@@ -83,13 +83,17 @@ public class Prs extends SwingWorker<Void, Void> {
                     //System.out.println(getMatch("(?<=StmtExecute\\(.{8}, )\\w{7,10}, \\w{7,10}(?=, )", line, 40));
                     String statement = quer.get(getMatch("(?<=StmtExecute\\(.{8}, )\\w{7,10}, \\w{7,10}(?=, )", line, 40)).toString().replaceAll("(?<=[^\\t\\t\\t])\"(?!( \\+))", "\\\\\"");
                     String name_variable_statement;
+                    if (is_new_step) {
+                        count_variable = 0;
+                        is_new_step = false;
+                    }
                     count_variable++;
-                    
+                    short num_con_short = number_connection.get(getMatch("(?<=OCIStmtExecute\\()\\w{5,10}(?=, )", line, 0));
                     if (statement.contains("begin")) { 
                         name_variable_statement = "clSt_" + count_variable;
                         methodFile.write("\t\tCallableStatement " + 
                                 name_variable_statement + 
-                                " = pullConnections.get(" + number_connection.get(getMatch("(?<=OCIStmtExecute\\()\\w{5,10}(?=, )", line, 0)) + ").prepareCall(\n" +
+                                " = pullConnections.get(" + num_con_short + ").prepareCall(\n" +
                                 statement +
                                 "\");\n"); 
                     }
@@ -97,7 +101,7 @@ public class Prs extends SwingWorker<Void, Void> {
                         name_variable_statement = "prSt_" + count_variable;
                         methodFile.write("\t\tPreparedStatement " + 
                                 name_variable_statement + 
-                                " = pullConnections.get(" + number_connection.get(getMatch("(?<=OCIStmtExecute\\()\\w{5,10}(?=, )", line, 0)) + ").prepareStatement(\n" +
+                                " = pullConnections.get(" + num_con_short + ").prepareStatement(\n" +
                                 statement +
                                 "\");\n"); 
                     }
@@ -131,22 +135,39 @@ public class Prs extends SwingWorker<Void, Void> {
                                     if (statement.contains("select"))
                                         flag_result_set = 2;
                                     else
-                                        flag_result_set = 1;
-                                        
+                                        flag_result_set = 1;                                        
                                 }
+                                else if (tp.equals("String"))
+                                    tp = "VARCHAR";
+                                else if (tp.equals("Long"))
+                                    tp = "INTEGER";
                                 tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".registerOutParameter(\"" + pr_name + "\", OracleTypes." + tp.toUpperCase() + ");\r\n");
                                 continue;
                             }
                             String value = line.substring(line.indexOf('=') + 1);
                             if (value.equals("[Null]"))
-                                value = "null";                   
-                            if (value.equals("null"))
-                                tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", " + value + ");\r\n");                        
-                            else if (!tp.equals("Double"))
-                                tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", \"" + value + "\");\r\n");
+                                if (tp.equals("Long") || tp.equals("Double"))
+                                    tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", " + (tp.equals("Long") ? "0);\r\n" : "0.);\r\n"));
+                                else
+                                    tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", null);\r\n");
                             else
-                                tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", " + value + ".);\r\n");                            
-                                
+                                switch (tp) {
+                                    case "Long":
+                                        tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", " + value + "L);\r\n");
+                                        break;
+                                    case "Double":
+                                        tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", " + value + (value.contains(".") ? ");\r\n" : ".);\r\n"));                            
+                                        break;
+                                    case "Blob":
+                                        tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", pullConnections.get(" + num_con_short + ").createBlob());\r\n");
+                                        break;
+                                    case "Clob":
+                                        tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", pullConnections.get(" + num_con_short + ").createClob());\r\n");
+                                        break;
+                                    default:
+                                        tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", \"" + value + "\");\r\n");
+                                        break;
+                                }                                
                         }                        
                     }
                     if (tmp_prm != null) {
@@ -264,6 +285,7 @@ public class Prs extends SwingWorker<Void, Void> {
                                 is_open_uc = true;
                         }
                         else if (line.matches(".*step_\\d{1,3}.*")) {
+                            is_new_step = true;
                             tmp = line.substring(line.indexOf("step_")).trim();                            
                             if (tmp.endsWith("*/"))
                                 tmp = tmp.substring(0 , tmp.length() - 2);
@@ -310,12 +332,10 @@ public class Prs extends SwingWorker<Void, Void> {
                     if (prmStatement.get(stm) == null)
                         prmStatement.put(stm, new HashMap<>());
                     prmStatement.get(stm).put(prm_stm, prm_vdf);
-                    //System.out.println(stm + " ==== " + prm_stm + " ==== " + prm_vdf);
-                   
                 }
             }
             if (line != null) {                
-                String stm = getMatch("OraStm\\d+(?=, \\d,)", line, 0);
+                String stm = getMatch("OraStm\\d+(?=, \\d+,)", line, 0);
                 if (prmStatement.get(stm) != null) {
                     for(Map.Entry<String, String> ref : prmStatement.get(stm).entrySet()) {
                         param_types.put(ref.getKey(), vdfFileTypes.getTypeOra(ref.getValue()));
@@ -323,7 +343,6 @@ public class Prs extends SwingWorker<Void, Void> {
                 }                
             }
         } catch (Exception e) { ErrorMsg.show(e); }
-        
         return line == null;
     }
     
@@ -348,7 +367,7 @@ public class Prs extends SwingWorker<Void, Void> {
         
         String[] nameFile = { "Action.c", "Bookmarks.xml", "Breakpoints.xml", "CardPinInfo.dat", 
             "Oracle2TierJava.prm", "Oracle2TierJava.prm.bak", "Oracle2TierJava.usr", "ScriptUploadMetadata.xml", 
-            "UserTasks.xml", "default.cfg", "default.usp", "vuser_end.c", "vuser_init.c" };             
+            "UserTasks.xml", "default.cfg", "default.usp", "vuser_end.c", "vuser_init.c", "ParamsFetch.javas" };             
         for (String name : nameFile) { 
             FileWriter out = new FileWriter(pathForOpenFile + "/" + name);
             BufferedReader in = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/res/forCopy/" + name)));
@@ -360,6 +379,7 @@ public class Prs extends SwingWorker<Void, Void> {
         }
         new File(pathForOpenFile + "/vuser_end.java").createNewFile();
         new File(pathForOpenFile + "/vuser_init.java").createNewFile();
+        new File(pathForOpenFile + "/ParamsFetch.javas").renameTo(new File(pathForOpenFile + "/ParamsFetch.java"));
     }
     
      private static String getMatch(String regexp, String source, int firstIndex) {
@@ -369,7 +389,7 @@ public class Prs extends SwingWorker<Void, Void> {
     }
      
     private class TypeParam {
-         private final HashMap<String, String> typeParam = new HashMap<>();
+         private final HashMap<String, String> typeParam = new HashMap<String, String>();
          
          public TypeParam(BufferedReader readerVdf) throws Exception {
              String line, prm, type = null;
@@ -385,12 +405,13 @@ public class Prs extends SwingWorker<Void, Void> {
                      if (type == null)
                          throw new Exception("ERORR VDF_H FILE(not found type for param " + prm + ")");
                      switch (type) {
-                            case "FLT8" : case "INT4" : type = "Double"; break;
-                            case "SZ" : type = "String"; break;
+                            case "FLT8": type = "Double"; break;
+                            case "INT4": type = "Long"; break;
+                            case "DATETIME" : case "SZ" : type = "String"; break;
                             case "OCI_REFCURSOR": type = "CursorName"; break;
-                            case "OCI_BLOB" : type = "Blob"; break;
-                            case "OCI_CLOB" : type = "Clob"; break;                            
-                            case "DATETIME" : type = "Date"; break;
+                            case "OCI_BLOB": type = "Blob"; break;
+                            case "OCI_CLOB": type = "Clob"; break;                            
+                            //case "DATETIME": type = "Date"; break;
                             default: throw new Exception("UNKNOWN SQL TYPE");
                         }                     
                      typeParam.put(prm, type);

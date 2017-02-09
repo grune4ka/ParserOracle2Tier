@@ -1,0 +1,100 @@
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Iterator;
+
+
+public class ParamsFetch implements Iterable<ParamsFetch> {
+    public final String Name;
+    public final int X;
+    public final int Y;
+    private ParamsFetch next = null;
+    private String value = null;         
+
+    public ParamsFetch(String Name, int X, int Y) {
+        this.Name = Name;
+        this.X = X;
+        this.Y = Y;
+    }
+        
+    private static ParamsFetch fetchResultSet(ParamsFetch listPrm, ResultSet result) throws SQLException {
+        
+		if (result != null) {
+			int count_column = result.getMetaData().getColumnCount();
+			if (listPrm == null)
+				while (result.next()) 
+					for (int i = 1; i <= count_column; i++) 
+						result.getObject(i);
+			else {			
+				for (int row = 1; result.next(); row++) 
+					for (int column = 1; column <= count_column; column++) { 
+						Object tmp = result.getObject(row);                        
+						for (ParamsFetch ref : listPrm) 
+							if (row == ref.X && column == ref.Y)                                                            
+								ref.setValue((String)tmp); 
+					}
+				return listPrm;
+			} 
+		}		
+		return null;
+    }
+        
+    public String getValue(String key) {
+        ParamsFetch tmp = this;
+        while (!tmp.Name.equals(key) && tmp.next != null)
+            tmp = tmp.next;
+        if (tmp.Name.equals(key))
+            return tmp.value;
+        return null;
+    }
+        
+    public String getValue() {
+        return value;
+    }
+		
+    public void setValue(String key, String value) {
+        ParamsFetch tmp = this;
+        while (!tmp.Name.equals(key) && tmp.next != null)
+            tmp = tmp.next;
+        if (tmp.Name.equals(key)) 
+            tmp.value = value;
+    }      
+        
+    public void setValue(String val) {
+        value = val;
+    }
+        
+    public void add(String Name, int X, int Y) {
+        ParamsFetch tmp = this;             
+        while (tmp.next != null)                 
+            tmp = tmp.next;
+            
+        tmp.next = new ParamsFetch(Name, X, Y);           
+    }
+        
+		@Override
+        public Iterator<ParamsFetch> iterator() {
+            return new iter();
+        }
+        
+    private  class iter implements  Iterator<ParamsFetch> {           
+        private ParamsFetch curr = ParamsFetch.this;
+
+        @Override
+        public boolean hasNext() {  
+            return curr != null;
+        }
+
+        @Override
+        public ParamsFetch next() { 
+            ParamsFetch tmp = curr;
+            curr = curr.next;
+            return tmp;
+        } 
+            
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+    } 
+} 
