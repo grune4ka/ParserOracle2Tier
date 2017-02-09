@@ -1,5 +1,5 @@
 package parseroracle2tier;
-
+import java.util.regex.*;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
@@ -18,7 +18,8 @@ public class Prs extends SwingWorker<Void, Void> {
     private boolean is_open_step = false;
     private boolean is_open_uc = false;
     private boolean is_exec = true;
-    private HashMap<String, ArrayList<String>> prmStatement = new HashMap<>();
+    private HashMap<String, HashMap<String, String>> prmStatement = new HashMap<>();
+    private TypeParam vdfFileTypes;
     
     @Override
     protected Void doInBackground() {
@@ -36,7 +37,8 @@ public class Prs extends SwingWorker<Void, Void> {
                 FileWriter methodFile = new FileWriter(methodTxt);
                 FileWriter actionFile = new FileWriter(actionTxt);
                 FileWriter businesFile = new FileWriter(businesTxt)) {
-            String line;  
+            String line; 
+            vdfFileTypes = new TypeParam(readerVdf);
             
             int i = 0; 
             HashMap<String, StringBuilder> quer = new HashMap<>();           
@@ -53,14 +55,15 @@ public class Prs extends SwingWorker<Void, Void> {
                 if (is_exec) {                    
                     if (endFile)
                         throw new Exception("NOT VALID ACTION FILE (less then expected execute statement)");
-                    endFile = parsAction(readerAction, readerVdf, actionFile, businesFile, methodFile, type_param);
+                    endFile = parsAction(readerAction, actionFile, businesFile, methodFile, type_param);
                     is_exec = false;
                 }
                 after_empty_execute_statement:
                 if (line.contains("OCIStmtPrepare")) {
-                    StringBuilder acum_statem = new StringBuilder("\t\t\t\t\t" + line.substring(109, line.length()));                    
-                    String key = line.substring(80, 98); 
-                    resultFile.write(line.substring(110, line.length()));
+                    StringBuilder acum_statem = new StringBuilder("\t\t\t\t\t" + line.substring(line.indexOf("=") + 1));                    
+                    String key = getMatch("(?<=OCIStmtPrepare\\().{15,25}(?=, )", line, 40); 
+                    //System.out.println("insert " + key);
+                    resultFile.write(line.indexOf("=") + 2);
                     while (!(line = readerLog.readLine()).contains("[OCI_SUCCESS]")) {
                         acum_statem.append(" \" + \r\n\t\t\t\t\t\"");
                         acum_statem.append(line);
@@ -72,12 +75,13 @@ public class Prs extends SwingWorker<Void, Void> {
                 else if (line.contains("OCISessionBegin")) {
                     
                     methodFile.write("\n\t\tnewSession();\n");
-                    number_connection.put(line.substring(81, 89), ++n_con);
+                    number_connection.put(getMatch("(?<=OCISessionBegin\\()\\w{5,10}(?=, )", line, 0), ++n_con);
                 }
                 else if (line.contains("OCIStmtExecute")) {                    
                     is_exec = true;
-                    int j = 0; 
-                    String statement = quer.get(line.substring(90, 108)).toString().replaceAll("(?<=[^\\t\\t\\t])\"(?!( \\+))", "\\\\\"");
+                    int j = 0;   
+                    //System.out.println(getMatch("(?<=StmtExecute\\(.{8}, )\\w{7,10}, \\w{7,10}(?=, )", line, 40));
+                    String statement = quer.get(getMatch("(?<=StmtExecute\\(.{8}, )\\w{7,10}, \\w{7,10}(?=, )", line, 40)).toString().replaceAll("(?<=[^\\t\\t\\t])\"(?!( \\+))", "\\\\\"");
                     String name_variable_statement;
                     count_variable++;
                     
@@ -85,7 +89,7 @@ public class Prs extends SwingWorker<Void, Void> {
                         name_variable_statement = "clSt_" + count_variable;
                         methodFile.write("\t\tCallableStatement " + 
                                 name_variable_statement + 
-                                " = pullConnections.get(" + number_connection.get(line.substring(80, 88)) + ").prepareCall(\n" +
+                                " = pullConnections.get(" + number_connection.get(getMatch("(?<=OCIStmtExecute\\()\\w{5,10}(?=, )", line, 0)) + ").prepareCall(\n" +
                                 statement +
                                 "\");\n"); 
                     }
@@ -93,7 +97,7 @@ public class Prs extends SwingWorker<Void, Void> {
                         name_variable_statement = "prSt_" + count_variable;
                         methodFile.write("\t\tPreparedStatement " + 
                                 name_variable_statement + 
-                                " = pullConnections.get(" + number_connection.get(line.substring(80, 88)) + ").prepareStatement(\n" +
+                                " = pullConnections.get(" + number_connection.get(getMatch("(?<=OCIStmtExecute\\()\\w{5,10}(?=, )", line, 0)) + ").prepareStatement(\n" +
                                 statement +
                                 "\");\n"); 
                     }
@@ -114,21 +118,22 @@ public class Prs extends SwingWorker<Void, Void> {
                             
                             String tmp = ""; 
                             int index = 0;
-                            pr_name = line.substring(3, line.indexOf('=')).trim();
+                            pr_name = getMatch("(?<=:)\\w*(?=\\s*=)", line, 0);
                             while (pr_name.compareToIgnoreCase(tmp = statement.substring(index, index + pr_name.length())) != 0) 
-                                index = statement.indexOf(":", index) + 1;                                                                            
+                                index = statement.indexOf(":", index) + 1; 
+                            String tp = type_param.get(pr_name);
                             pr_name = tmp; 
-                            String tp = type_param.get(pr_name.toUpperCase());
-                            if (tp == null) 
-                                tp = type_param.get(pr_name.replace("__", "_").toUpperCase());
                             
                             if (statement.matches("[\\s\\S]*" + pr_name + "\\s*:=[\\s\\S]*")) {
-                                flag_result_set = 1;
-                                if (statement.contains("select"))
-                                    flag_result_set = 2;
                                 rs_name = pr_name;
-                                if (tp.equals("CursorName"))
-                                    tp = "CURSOR";
+                                if (tp.equals("CursorName")) {
+                                    tp = "CURSOR";                                    
+                                    if (statement.contains("select"))
+                                        flag_result_set = 2;
+                                    else
+                                        flag_result_set = 1;
+                                        
+                                }
                                 tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".registerOutParameter(\"" + pr_name + "\", OracleTypes." + tp.toUpperCase() + ");\r\n");
                                 continue;
                             }
@@ -239,7 +244,7 @@ public class Prs extends SwingWorker<Void, Void> {
         } catch (IOException e) { ErrorMsg.show(e); }
     }
     
-    private boolean parsAction(BufferedReader readerAction, BufferedReader readerVdf,FileWriter actionFile, FileWriter businesFile, FileWriter methodFile, HashMap<String, String> param_types) throws IOException {
+    private boolean parsAction(BufferedReader readerAction, FileWriter actionFile, FileWriter businesFile, FileWriter methodFile, HashMap<String, String> param_types) throws IOException {
         
         String line = null;
         String tmp;   
@@ -298,45 +303,24 @@ public class Prs extends SwingWorker<Void, Void> {
                     } while ((line = readerAction.readLine()) != null); 
                 }
                 if (line.contains("lrd_ora8_bind_placeholder")) {
-                    int index_begin_stm = line.indexOf("eholder(OraStm") + 8;
-                    int index_begin_prm = line.indexOf(" &", index_begin_stm + 16) + 2;
-                    String stm = line.substring(index_begin_stm, line.indexOf(", ", index_begin_stm));
-                    String prm = line.substring(index_begin_prm, line.indexOf(", ", index_begin_prm));
+                    
+                    String stm = getMatch("(?<=bind_placeholder\\()\\w*\\d(?=, &)", line, 0);
+                    String prm_vdf = getMatch("(?<=\", &)\\w*(?=,)", line, 25);
+                    String prm_stm = getMatch("(?<=\\d, \")\\w*(?=\", &)", line, 25);
                     if (prmStatement.get(stm) == null)
-                        prmStatement.put(stm, new ArrayList<>());
-                    prmStatement.get(stm).add(prm);
+                        prmStatement.put(stm, new HashMap<>());
+                    prmStatement.get(stm).put(prm_stm, prm_vdf);
+                    //System.out.println(stm + " ==== " + prm_stm + " ==== " + prm_vdf);
                    
                 }
             }
-            if (line != null) {
-            String stm = line.substring(line.indexOf("OraStm"), line.indexOf(", ", line.indexOf("OraStm")));
+            if (line != null) {                
+                String stm = getMatch("OraStm\\d+(?=, \\d,)", line, 0);
                 if (prmStatement.get(stm) != null) {
-                    param_types.clear();
-                    for (String prm : prmStatement.get(stm)) {
-                        while ((line = readerVdf.readLine()) != null)
-                            if (line.contains(prm)) {
-                                while ((line = readerVdf.readLine()) != null)
-                                    if (line.contains("DT_"))
-                                        break;
-                                break;
-                            }
-                        if (line == null)
-                            throw new Exception("ERORR VDF.H FILE");
-                        int index_begin_type = line.indexOf("DT_") + 3;
-                        String tp = null;
-                        switch (line.substring(index_begin_type, line.indexOf("};", index_begin_type))) {
-                            case "FLT8" : case "INT4" : tp = "Double"; break;
-                            case "SZ" : tp = "String"; break;
-                            case "OCI_REFCURSOR": tp = "CursorName"; break;
-                            case "OCI_BLOB" : tp = "Blob"; break;
-                            case "OCI_CLOB" : tp = "Clob"; break;                            
-                            case "DATETIME" : tp = "Date"; break;
-                            default: throw new Exception("UNKNOWN SQL TYPE");
-                        }
-                        param_types.put(prm.substring(prm.startsWith("_") ? 1 : 0, prm.lastIndexOf("_")), tp);
+                    for(Map.Entry<String, String> ref : prmStatement.get(stm).entrySet()) {
+                        param_types.put(ref.getKey(), vdfFileTypes.getTypeOra(ref.getValue()));
                     }
-                }
-                //prmStatement.remove(stm);
+                }                
             }
         } catch (Exception e) { ErrorMsg.show(e); }
         
@@ -377,4 +361,43 @@ public class Prs extends SwingWorker<Void, Void> {
         new File(pathForOpenFile + "/vuser_end.java").createNewFile();
         new File(pathForOpenFile + "/vuser_init.java").createNewFile();
     }
+    
+     private static String getMatch(String regexp, String source, int firstIndex) {
+        Matcher m = Pattern.compile(regexp).matcher(source);        
+        m.find(firstIndex);
+        return m.group();
+    }
+     
+    private class TypeParam {
+         private final HashMap<String, String> typeParam = new HashMap<>();
+         
+         public TypeParam(BufferedReader readerVdf) throws Exception {
+             String line, prm, type = null;
+             while((line = readerVdf.readLine()) != null) 
+                 if (line.contains("static LRD_VAR_DESC")) {
+                     prm = getMatch("(?<=LRD_VAR_DESC		    )\\w+(?= =)", line, 0);
+                     do {
+                         if (line.contains("DT_")) {
+                             type = getMatch("(?<=DT_)\\w*(?=};)", line, 0);
+                             break;
+                         }
+                     } while((line = readerVdf.readLine()) != null);
+                     if (type == null)
+                         throw new Exception("ERORR VDF_H FILE(not found type for param " + prm + ")");
+                     switch (type) {
+                            case "FLT8" : case "INT4" : type = "Double"; break;
+                            case "SZ" : type = "String"; break;
+                            case "OCI_REFCURSOR": type = "CursorName"; break;
+                            case "OCI_BLOB" : type = "Blob"; break;
+                            case "OCI_CLOB" : type = "Clob"; break;                            
+                            case "DATETIME" : type = "Date"; break;
+                            default: throw new Exception("UNKNOWN SQL TYPE");
+                        }                     
+                     typeParam.put(prm, type);
+                 }
+         }         
+         public String getTypeOra(String prm) {
+             return typeParam.get(prm);
+         }
+     }
 }
