@@ -1,4 +1,5 @@
 package parseroracle2tier;
+
 import java.util.regex.*;
 import java.io.BufferedReader;
 import java.io.File;
@@ -73,15 +74,13 @@ public class Prs extends SwingWorker<Void, Void> {
                     resultFile.write(System.lineSeparator() + System.lineSeparator() + ++i + ")" + System.lineSeparator());
                     quer.put(key, acum_statem);                    
                 }
-                else if (line.contains("OCISessionBegin")) {
-                    
+                else if (line.contains("OCISessionBegin")) {                    
                     methodFile.write("\n\t\tnewSession();\n");
                     number_connection.put(getMatch("(?<=OCISessionBegin\\()\\w{5,10}(?=, )", line, 0), ++n_con);
                 }
                 else if (line.contains("OCIStmtExecute")) {                    
                     is_exec = true;
                     int j = 0;   
-                    //System.out.println(getMatch("(?<=StmtExecute\\(.{8}, )\\w{7,10}, \\w{7,10}(?=, )", line, 40));
                     String statement = quer.get(getMatch("(?<=StmtExecute\\(.{8}, )\\w{7,10}, \\w{7,10}(?=, )", line, 40)).toString().replaceAll("(?<=[^\\t\\t\\t])\"(?!( \\+))", "\\\\\"");
                     String name_variable_statement;
                     if (is_new_step) {
@@ -148,11 +147,11 @@ public class Prs extends SwingWorker<Void, Void> {
                             String value = line.substring(line.indexOf('=') + 1);
                             if (tp.equals("DATE"))
                                 tp = "String";
-                            if (value.equals("[Null]"))
+                            if (value.equals("[Null]") && !tp.equals("Clob") && !tp.equals("Blob"))
                                 if (tp.equals("Long") || tp.equals("Double"))
                                     tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", " + (tp.equals("Long") ? "0L);\r\n" : "0.);\r\n"));
                                 else
-                                    tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", null);\r\n");
+                                    tmp_prm.put(pr_name, "\t\t" + name_variable_statement + ".set" + tp + "(\"" + pr_name + "\", \"\");\r\n");
                             else
                                 switch (tp) {
                                     case "Long":
@@ -333,7 +332,7 @@ public class Prs extends SwingWorker<Void, Void> {
                     String prm_vdf = getMatch("(?<=\", &)\\w*(?=,)", line, 25);
                     String prm_stm = getMatch("(?<=\\d, \")\\w*(?=\", &)", line, 25);
                     if (prmStatement.get(stm) == null)
-                        prmStatement.put(stm, new HashMap<>());
+                        prmStatement.put(stm, new HashMap<String,String>());
                     prmStatement.get(stm).put(prm_stm, prm_vdf);
                 }
             }
@@ -344,7 +343,7 @@ public class Prs extends SwingWorker<Void, Void> {
                         String check_type;
                         while ((check_type = vdfFileTypes.getTypeOra(ref.getValue())) == null)
                                 if (!vdfFileTypes.isAlive())
-                                    throw new Exception("NOT FOUND TYPES FOR PARAM: " + ref.getValue());                       
+                                    throw new Exception("NOT FOUND TYPES AFTER SEARCH VDF_H FOR PARAM: " + ref.getValue());                       
                         param_types.put(ref.getKey(), check_type);
                     }
                 }                
@@ -396,7 +395,8 @@ public class Prs extends SwingWorker<Void, Void> {
     }
      
     private class TypeParam extends Thread {
-         private final HashMap<String, String> typeParam = new HashMap<String, String>();
+        
+         private final HashMap<String, String> typeParam = new HashMap<>();
          private final BufferedReader readerVdf;
          
          public TypeParam(BufferedReader readerVdf) throws Exception {
@@ -406,19 +406,19 @@ public class Prs extends SwingWorker<Void, Void> {
          @Override
          public void run() {
              try {
-             String line, prm, type = null;
-             while((line = readerVdf.readLine()) != null) 
-                 if (line.contains("static LRD_VAR_DESC")) {
-                     prm = getMatch("(?<=LRD_VAR_DESC		    )\\w+(?= =)", line, 0);
-                     do {
-                         if (line.contains("DT_")) {
-                             type = getMatch("(?<=DT_)\\w*(?=};)", line, 0);
-                             break;
-                         }
-                     } while((line = readerVdf.readLine()) != null);
-                     if (type == null)
-                         throw new Exception("ERORR VDF_H FILE(not found type for param " + prm + ")");
-                     switch (type) {
+                String line, prm, type = null;
+                while((line = readerVdf.readLine()) != null) 
+                    if (line.contains("static LRD_VAR_DESC")) {
+                        prm = getMatch("(?<=LRD_VAR_DESC		    )\\w+(?= =)", line, 0);
+                        do {
+                            if (line.contains("DT_")) {
+                                type = getMatch("(?<=DT_)\\w*(?=};)", line, 0);
+                                break;
+                            }
+                        } while((line = readerVdf.readLine()) != null);
+                        if (type == null)
+                            throw new Exception("ERORR VDF_H FILE(not found type for param " + prm + ")");
+                        switch (type) {
                             case "FLT8": type = "Double"; break;
                             case "INT4": type = "Long"; break;
                             case "SZ" : type = "String"; break;
@@ -428,11 +428,12 @@ public class Prs extends SwingWorker<Void, Void> {
                             case "DATETIME": type = "DATE"; break;
                             default: throw new Exception("UNKNOWN SQL TYPE");
                         }                     
-                     putParam(prm, type);
-                 }
+                        putParam(prm, type);
+                    }
              } catch (IOException e) { ErrorMsg.show(e); }
              catch (Exception e) { ErrorMsg.show(e); }
          }
+         
          public synchronized String getTypeOra(String prm) {
              return typeParam.get(prm);
          }
