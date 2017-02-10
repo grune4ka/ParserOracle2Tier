@@ -89,7 +89,7 @@ public class Prs extends SwingWorker<Void, Void> {
                     }
                     count_variable++;
                     short num_con_short = number_connection.get(getMatch("(?<=OCIStmtExecute\\()\\w{5,10}(?=, )", line, 0));
-                    if (statement.contains("begin")) { 
+                    if (statement.contains(":")) { 
                         name_variable_statement = "clSt_" + count_variable;
                         methodFile.write("\t\tCallableStatement " + 
                                 name_variable_statement + 
