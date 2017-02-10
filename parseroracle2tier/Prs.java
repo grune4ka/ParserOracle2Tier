@@ -19,7 +19,7 @@ public class Prs extends SwingWorker<Void, Void> {
     private boolean is_open_uc = false;
     private boolean is_exec = true;
     private boolean is_new_step = true;
-    private HashMap<String, HashMap<String, String>> prmStatement = new HashMap<>();
+    private final HashMap<String, HashMap<String, String>> prmStatement = new HashMap<>();
     private TypeParam vdfFileTypes;
     
     @Override
@@ -39,7 +39,8 @@ public class Prs extends SwingWorker<Void, Void> {
                 FileWriter actionFile = new FileWriter(actionTxt);
                 FileWriter businesFile = new FileWriter(businesTxt)) {
             String line; 
-            vdfFileTypes = new TypeParam(readerVdf);
+            vdfFileTypes =  new TypeParam(readerVdf);
+            vdfFileTypes.start();
             
             int i = 0; 
             HashMap<String, StringBuilder> quer = new HashMap<>();           
@@ -339,8 +340,12 @@ public class Prs extends SwingWorker<Void, Void> {
             if (line != null) {                
                 String stm = getMatch("OraStm\\d+(?=, \\d+,)", line, 0);
                 if (prmStatement.get(stm) != null) {
-                    for(Map.Entry<String, String> ref : prmStatement.get(stm).entrySet()) {
-                        param_types.put(ref.getKey(), vdfFileTypes.getTypeOra(ref.getValue()));
+                    for(Map.Entry<String, String> ref : prmStatement.get(stm).entrySet()) {                       
+                        String check_type;
+                        while ((check_type = vdfFileTypes.getTypeOra(ref.getValue())) == null)
+                                if (!vdfFileTypes.isAlive())
+                                    throw new Exception("NOT FOUND TYPES FOR PARAM: " + ref.getValue());                       
+                        param_types.put(ref.getKey(), check_type);
                     }
                 }                
             }
@@ -390,10 +395,17 @@ public class Prs extends SwingWorker<Void, Void> {
         return m.group();
     }
      
-    private class TypeParam {
+    private class TypeParam extends Thread {
          private final HashMap<String, String> typeParam = new HashMap<String, String>();
+         private final BufferedReader readerVdf;
          
          public TypeParam(BufferedReader readerVdf) throws Exception {
+             this.readerVdf = readerVdf;
+         } 
+         
+         @Override
+         public void run() {
+             try {
              String line, prm, type = null;
              while((line = readerVdf.readLine()) != null) 
                  if (line.contains("static LRD_VAR_DESC")) {
@@ -416,11 +428,17 @@ public class Prs extends SwingWorker<Void, Void> {
                             case "DATETIME": type = "DATE"; break;
                             default: throw new Exception("UNKNOWN SQL TYPE");
                         }                     
-                     typeParam.put(prm, type);
+                     putParam(prm, type);
                  }
-         }         
-         public String getTypeOra(String prm) {
+             } catch (IOException e) { ErrorMsg.show(e); }
+             catch (Exception e) { ErrorMsg.show(e); }
+         }
+         public synchronized String getTypeOra(String prm) {
              return typeParam.get(prm);
+         }
+         
+         private synchronized void putParam(String prm, String type) {
+             typeParam.put(prm, type);
          }
      }
 }
