@@ -109,7 +109,7 @@ public class Prs extends SwingWorker<Void, Void> {
                     String rs_name = null;
                     HashMap<String, String> tmp_prm = null;
                     short flag_result_set = 0;
-                    while (!(line = readerLog.readLine()).contains("AFTER") && !line.contains("row(s) fetched")) {                        
+                    while ((line = readerLog.readLine()) != null && !line.contains("Output placeholders AFTER execution")) {                        
                         if (line.isEmpty())
                             continue;
                         else if (line.contains("[LRD")) {                            

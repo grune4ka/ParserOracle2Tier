@@ -28,7 +28,7 @@ public class ParamsFetch implements Iterable<ParamsFetch> {
 			else {			
 				for (int row = 1; result.next(); row++) 
 					for (int column = 1; column <= count_column; column++) { 
-						Object tmp = result.getObject(row);                        
+						Object tmp = result.getObject(column);                        
 						for (ParamsFetch ref : listPrm) 
 							if (row == ref.X && column == ref.Y)                                                            
 								ref.setValue((String)tmp); 
