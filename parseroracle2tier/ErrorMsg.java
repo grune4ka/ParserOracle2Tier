@@ -2,6 +2,8 @@ package parseroracle2tier;
 
 import javax.swing.*;
 
+// -------
+
 public class ErrorMsg {
 
     public static void show(Exception e) {
